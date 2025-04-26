@@ -28,112 +28,150 @@ class RealEstateCard extends StatefulWidget {
 
 class _RealEstateCardState extends State<RealEstateCard> {
   @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(5),
+      margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
+        color: Colors.teal[100],
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 6,
+            offset: const Offset(1, 1),
+          ),
         ],
+        border: Border.all(
+          // إضافة الحدود هنا
+          color: Colors.teal.shade400,
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ✅ صورة العقار
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(15),
-              topRight: Radius.circular(15),
-            ),
-            child:
-                widget.image.isNotEmpty
-                    ? Image.network(
-                      widget.image,
-                      height: 120,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    )
-                    : Image.asset(
-                      "images/fig.webp",
-                      height: 120,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
-          ),
-          const SizedBox(height: 7),
-
-          // ✅ تفاصيل العقار
+          // الصورة
           Padding(
-            padding: const EdgeInsets.all(4),
+            padding: EdgeInsets.only(right: 5, left: 5, top: 5),
+            child: SizedBox(
+              height: 110,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(15),
+                ),
+                child:
+                    widget.image.isNotEmpty
+                        ? Image.network(
+                          widget.image,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        )
+                        : Image.asset(
+                          "images/fig.webp",
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+              ),
+            ),
+          ),
+
+          // الصورة
+          SizedBox(
+            height: 40,
+            child: ClipRRect(
+              child:
+                  widget.status == "available"
+                      ? Image.asset(
+                        "images/available.PNG",
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                      : Image.asset(
+                        "images/booked.PNG",
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+            ),
+          ),
+
+          // التفاصيل
+          Padding(
+            padding: const EdgeInsets.only(right: 10, left: 3, top: 5),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // العنوان
                 Row(
                   children: [
-                    Icon(
-                      Icons.location_on,
-                      color: Color.fromARGB(157, 19, 160, 141),
-                      size: 15,
-                    ),
+                    Icon(Icons.location_on, color: Colors.teal[900], size: 24),
                     Text(
                       widget.title,
-                      style: const TextStyle(
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal[900],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 5),
+
+                // السعر والمفضلة
+                Row(
+                  children: [
+                    Icon(Icons.attach_money, color: Colors.teal[900], size: 20),
+                    // السعر
+                    Text(
+                      " ${widget.price} L.E",
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
+                        color: Colors.teal[900],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 5),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.attach_money,
-                      size: 15.0,
-                      color: Color.fromARGB(157, 19, 160, 141),
-                    ),
-                    Text(
-                      widget.price,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  widget.status == "available" ? "Available" : "Booked",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color:
-                        widget.status == "available"
-                            ? Color.fromARGB(157, 19, 160, 141)
-                            : Colors.red,
-                  ),
-                ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
 
+                // التقييم والحالة
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(Icons.star, color: Colors.amber, size: 16),
-                    SizedBox(width: 3),
-                    Text(widget.rate, style: const TextStyle(fontSize: 14)),
-                    const SizedBox(width: 80),
+                    // التقييم
+                    Row(
+                      children: [
+                        const Icon(Icons.star, color: Colors.amber, size: 20),
+                        const SizedBox(width: 4),
 
+                        widget.rate == "null"
+                            ? Text(
+                              "لا تقييم",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.teal[900],
+                              ),
+                            )
+                            : Text(
+                              widget.rate,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.teal[900],
+                              ),
+                            ),
+                      ],
+                    ),
+                    // أيقونة المفضلة
                     Icon(
                       widget.isFavorite
                           ? Icons.favorite
                           : Icons.favorite_border,
-                      color: widget.isFavorite ? Colors.red : Colors.grey,
-                      size: 20,
+                      color: widget.isFavorite ? Colors.red : Colors.teal[900],
+                      size: 22,
                     ),
                   ],
                 ),

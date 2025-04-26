@@ -133,7 +133,7 @@ class _ChatScreenState extends State<ChatScreen> {
             color: Colors.white,
           ),
         ),
-        backgroundColor: Color.fromARGB(157, 42, 202, 181),
+        backgroundColor: Colors.teal[800],
       ),
       body: Column(
         children: [
@@ -164,16 +164,25 @@ class _ChatScreenState extends State<ChatScreen> {
         decoration: BoxDecoration(
           color:
               message.isSentByMe == false
-                  ? Color.fromARGB(157, 42, 202, 181)
-                  : Colors.grey[200],
+                  ? Colors.teal[100]
+                  : Colors.teal[800],
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Column(children: [Text(message.content),SizedBox(height: 4),
+        child: Column(children: [Text(message.content , style: TextStyle(
+                  color: message.isSentByMe == false
+                  ? Colors.teal[900]
+                  : Colors.teal[100],
+                  fontSize: 15,
+                    fontWeight: FontWeight.bold,
+
+                ),),SizedBox(height: 4),
               Text(
                 DateFormat('HH:mm').format(message.timestamp),
                 style: TextStyle(
-                  color: Colors.black54,
-                  fontSize: 10,
+                  color: message.isSentByMe == false
+                  ? Colors.teal[900]
+                  : Colors.teal[100],
+                  fontSize: 12,
                 ),
               ),]),
       ),

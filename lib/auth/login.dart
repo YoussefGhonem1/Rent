@@ -26,8 +26,10 @@ class _LoginScreenState extends State<LoginScreen> {
   login() async {
     isloading = true;
     setState(() {});
-    var response = await _curd.postRequest(linkLogin,
-        {"email": emailController.text, "password": passwordController.text});
+    var response = await _curd.postRequest(linkLogin, {
+      "email": emailController.text,
+      "password": passwordController.text,
+    });
     isloading = false;
     setState(() {});
     if (response['status'] == "success") {
@@ -37,9 +39,13 @@ class _LoginScreenState extends State<LoginScreen> {
       sharedPref.setString("type", response['data']['type'].toString());
       sharedPref.getString("type") == "admin"
           ? Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (context) => HomeAdmin()))
+            context,
+            MaterialPageRoute(builder: (context) => HomeAdmin()),
+          )
           : Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (context) => HomeOwner()));
+            context,
+            MaterialPageRoute(builder: (context) => HomeOwner()),
+          );
     } else {
       print("****fail***");
     }
@@ -48,100 +54,114 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.lightBlue[50],
+      backgroundColor: Colors.teal[50],
       body: Center(
-        child: isloading == true
-            ? Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Welcome Back!",
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      "Login to continue your summer journey.",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.blueAccent,
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    TextFormField(
-                      validator: (val) {
-                        return validInput(val!, 3, 30);
-                      },
-                      controller: emailController,
-                      decoration: InputDecoration(
-                        labelText: "Email",
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          borderSide: BorderSide.none,
+        child:
+            isloading == true
+                ? Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
+                  padding: const EdgeInsets.all(25.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "مرحبًا بعودتك",
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.teal[900],
                         ),
-                        prefixIcon: Icon(Icons.email, color: Colors.orange),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    TextFormField(
-                      validator: (val) {
-                        return validInput(val!, 3, 30);
-                      },
-                      controller: passwordController,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: "Password",
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          borderSide: BorderSide.none,
+                      const SizedBox(height: 8),
+                      Text(
+                        "قم بتسجيل الدخول لمواصلة رحلتك الصيفية",
+                        style: TextStyle(fontSize: 18, color: Colors.teal[900]),
+                      ),
+                      const SizedBox(height: 40),
+                      TextFormField(
+                        validator: (val) {
+                          return validInput(val!, 3, 30);
+                        },
+                        controller: emailController,
+                        decoration: InputDecoration(
+                          labelText: "بريد إلكتروني",
+                          labelStyle: TextStyle(color: Colors.teal[900]),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide.none,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.email,
+                            color: Colors.teal[900],
+                          ),
                         ),
-                        prefixIcon: Icon(Icons.lock, color: Colors.orange),
                       ),
-                    ),
-                    const SizedBox(height: 30),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
+                      const SizedBox(height: 20),
+                      TextFormField(
+                        validator: (val) {
+                          return validInput(val!, 3, 30);
+                        },
+                        controller: passwordController,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: "كلمة المرور",
+                          labelStyle: TextStyle(color: Colors.teal[900]),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide.none,
+                          ),
+                          prefixIcon: Icon(Icons.lock, color: Colors.teal[900]),
                         ),
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 15, horizontal: 50),
                       ),
-                      onPressed: () async {
-                        await login();
-                      },
-                      child: Text(
-                        "Login",
-                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      const SizedBox(height: 30),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal[800],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 17,
+                            horizontal: 120,
+                          ),
+                        ),
+                        onPressed: () async {
+                          await login();
+                        },
+                        child: Text(
+                          "تسجيل الدخول",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
+                      const SizedBox(height: 20),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => RegisterScreen()));
-                      },
-                      child: Text(
-                        "Don't have an account? Register",
-                        style: TextStyle(color: Colors.blueAccent),
+                              builder: (context) => RegisterScreen(),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          "ليس لديك حساب؟ سجل الآن",
+                          style: TextStyle(
+                            color: Colors.teal[900],
+                            fontSize: 16,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
       ),
     );
   }

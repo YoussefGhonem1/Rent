@@ -11,10 +11,7 @@ import 'ownerrealstates.dart';
 
 class EditRealEstatePage extends StatefulWidget {
   final realdata;
-  const EditRealEstatePage({
-    super.key,
-    this.realdata,
-  });
+  const EditRealEstatePage({super.key, this.realdata});
 
   @override
   _EditRealEstatePageState createState() => _EditRealEstatePageState();
@@ -29,28 +26,25 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _rentAmountController = TextEditingController();
   final TextEditingController _saleAmountController = TextEditingController();
-
-  // Lists to store selected images and videos
+  String? selectedFloor;
+  int? selectedRooms;
+  String? selectedDirection;
   List<File> _selectedImages = [];
   final List<File> _selectedVideos = [];
   final List<VideoPlayerController> _videoControllers = [];
   final List<bool> _isPlaying = [];
 
-  // Request permission to manage external storage
   Future<void> _requestPermissions() async {
     final status = await Permission.manageExternalStorage.request();
-    if (status.isGranted) {
-      // Permissions granted, continue with media picking
-    } else {
+    if (!status.isGranted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content:
-                Text('Storage permission is required to select images/videos')),
+        const SnackBar(
+          content: Text('يجب منح صلاحيات الوصول لتحديد الصور/الفيديوهات'),
+        ),
       );
     }
   }
 
-  // Pick multiple images
   Future<void> _pickImages() async {
     final pickedImages = await ImagePicker().pickMultiImage();
     if (pickedImages.isNotEmpty) {
@@ -61,60 +55,26 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
     }
   }
 
-  // Pick video
   Future<void> _pickVideo() async {
-    final pickedVideo =
-        await ImagePicker().pickVideo(source: ImageSource.gallery);
+    final pickedVideo = await ImagePicker().pickVideo(
+      source: ImageSource.gallery,
+    );
     if (pickedVideo != null) {
       File videoFile = File(pickedVideo.path);
       setState(() {
         _selectedVideos.add(videoFile);
-        VideoPlayerController videoController =
-            VideoPlayerController.file(videoFile)
-              ..initialize().then((_) {
-                setState(() {});
-              });
+        VideoPlayerController videoController = VideoPlayerController.file(
+            videoFile,
+          )
+          ..initialize().then((_) {
+            setState(() {});
+          });
         _videoControllers.add(videoController);
-        _isPlaying.add(false); // Video initially paused
+        _isPlaying.add(false);
       });
     }
   }
 
-  // Handle form submission
-  /* void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      // Collect form data
-      final location = _locationController.text;
-      final description = _descriptionController.text;
-      final phone = _phoneController.text;
-      final rentAmount = _rentAmountController.text;
-      final saleAmount = _saleAmountController.text;
-
-      /* // Handle form submission (e.g., send to server or database)
-      print("Location: $location");
-      print("Description: $description");
-      print("Phone: $phone");
-      print("Rent Amount: $rentAmount");
-      print("Sale Amount: $saleAmount");
- */
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Form submitted successfully!')),
-      );
-
-      // Clear form
-      _formKey.currentState!.reset();
-      setState(() {
-        _selectedImages = [];
-        _selectedVideos = [];
-        _videoControllers.forEach((controller) => controller.dispose());
-        _videoControllers.clear();
-        _isPlaying.clear();
-      });
-    }
-  } */
-
-  // Toggle play/pause for a video
   void _togglePlayPause(int index) {
     setState(() {
       if (_isPlaying[index]) {
@@ -126,46 +86,41 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
     });
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-    // Dispose video controllers to avoid memory leaks
-    for (var controller in _videoControllers) {
-      controller.dispose();
-    }
-  }
-
   editRealstate() async {
     isloading = true;
     setState(() {});
 
     try {
-      var response;
-
-      response = await _crud.postRequestWithMultipleFiles(
-          linkEdit,
-          {
-            "id": widget.realdata['id'].toString(),
-            "address": _locationController.text,
-            "description": _descriptionController.text,
-            "phone": _phoneController.text,
-            "rent_amount": _rentAmountController.text,
-            "imagename": widget.realdata['images'].toString(),
-          },
-          _selectedImages,
-          _selectedVideos);
+      var response = await _crud.postRequestWithMultipleFiles(
+        linkEdit,
+        {
+          "id": widget.realdata['id'].toString(),
+          "address": _locationController.text,
+          "description": _descriptionController.text,
+          "phone": _phoneController.text,
+          "rent_amount": _rentAmountController.text,
+          "imagename": widget.realdata['images'].toString(),
+          "floor_number": selectedFloor.toString(),
+          "room_count": selectedRooms.toString(),
+          "property_direction": selectedDirection.toString(),
+        },
+        _selectedImages,
+        _selectedVideos,
+      );
 
       isloading = false;
       setState(() {});
 
       if (response != null && response['status'] == "success") {
-       sharedPref.getString("type") == "admin"
-          ? Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (context) => ControlAdmin()))
-          : Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (context) => OwnerRealstate()));
-      } else {
-        print("Registration failed");
+        sharedPref.getString("type") == "admin"
+            ? Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => ControlAdmin()),
+            )
+            : Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => OwnerRealstate()),
+            );
       }
     } catch (e) {
       isloading = false;
@@ -180,223 +135,506 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
     _phoneController.text = widget.realdata['phone'];
     _locationController.text = widget.realdata['address'];
     _rentAmountController.text = widget.realdata['rent_amount'];
-    
-    /* _selectedImages = List<String>.from(widget.realdata['photos']).map((uri) => File('$linkImageRoot/$uri')).toList(); */
-
-  /*   _selectedVideos = List<String>.from(widget.realdata['videos']).map((uri) => File('$linkVideoRoot/$uri')).toList(); */
+    selectedFloor = widget.realdata['floor_number']?.toString() ?? null;
+    selectedRooms =
+        widget.realdata['room_count'] != null
+            ? int.tryParse(widget.realdata['room_count'].toString())
+            : null;
+    selectedDirection =
+        widget.realdata['property_direction']?.toString() ?? null;
+        
     super.initState();
   }
+
+  @override
+  void dispose() {
+    for (var controller in _videoControllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.teal[50],
       appBar: AppBar(
-         leading: IconButton(
-    icon: Icon(Icons.arrow_back , color: Colors.white), // أو أيقونة تانية تعجبك
-    onPressed: () {
-      Navigator.pop(context); // الرجوع للصفحة السابقة
-    },
-  ),
-        title: const Text("Edit Real Estate"  , style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: Colors.white,
-              ),),
-        backgroundColor: Color.fromARGB(157, 42, 202, 181),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.teal[50]),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          "العوده الى الرئيسيه",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: Colors.teal[50],
+          ),
+        ),
+        backgroundColor: Colors.teal[800],
       ),
-      body: isloading == true
-          ? Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Select Photos Button
-                    ElevatedButton(
-                      onPressed: _pickImages,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color.fromARGB(157, 42, 202, 181),
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 15, horizontal: 45),
+      body:
+          isloading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Text(
+                          "تعديل بيانات العقار",
+                          style: TextStyle(
+                            fontSize: 24,
+                            color: Colors.teal[800],
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                      child: const Text("Select Photos",
-                          style: TextStyle(fontSize: 16 , color: Colors.white)),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Display selected images
-                    _selectedImages.isNotEmpty
-                        ? SingleChildScrollView(
+                      const SizedBox(height: 20),
+                      Center(
+                        child: ElevatedButton(
+                          onPressed: _pickImages,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal[800],
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 8,
+                              horizontal: 45,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                "تعديل الصور",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.teal[50],
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                "ليس اجبارى و لكن ضروري لتساعد الآخرين على اتخاذ القرار",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.teal[50],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _selectedImages.isNotEmpty
+                          ? SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: Row(
-                              children: _selectedImages.map((file) {
-                                return Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 5),
-                                  child: Image.file(
-                                    file,
-                                    width: 200,
-                                    height: 250,
-                                    fit: BoxFit.cover,
-                                  ),
-                                );
-                              }).toList(),
+                              children:
+                                  _selectedImages.asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final file = entry.value;
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 5,
+                                      ),
+                                      child: Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              border: Border.all(
+                                                color: Colors.teal.shade100,
+                                                width: 2,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              child: Image.file(
+                                                file,
+                                                width: 200,
+                                                height: 250,
+                                                fit: BoxFit.cover,
+                                              ),
+                                            ),
+                                          ),
+                                          Positioned(
+                                            top: 0,
+                                            right: 0,
+                                            child: Material(
+                                              color: Colors.redAccent,
+                                              shape: const CircleBorder(),
+                                              elevation: 2,
+                                              child: InkWell(
+                                                customBorder:
+                                                    const CircleBorder(),
+                                                onTap:
+                                                    () => setState(
+                                                      () => _selectedImages
+                                                          .removeAt(index),
+                                                    ),
+                                                child: const Padding(
+                                                  padding: EdgeInsets.all(4.0),
+                                                  child: Icon(
+                                                    Icons.close,
+                                                    size: 18,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
                             ),
                           )
-                        : const SizedBox.shrink(),
-
-                    const SizedBox(height: 20),
-
-                    // Select Video Button
-                    ElevatedButton(
-                      onPressed: _pickVideo,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color.fromARGB(157, 42, 202, 181),
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 15, horizontal: 50),
-                      ),
-                      child: const Text("Select Video",
-                          style: TextStyle(fontSize: 16 , color: Colors.white)),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Display selected videos
-                    _selectedVideos.isNotEmpty
-                        ? SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: _selectedVideos.map((file) {
-                                int index = _selectedVideos.indexOf(file);
-                                return Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 5),
-                                  child: Column(
-                                    children: [
-                                      SizedBox(
-                                        width: 200,
-                                        height: 250,
-                                        child: VideoPlayer(
-                                            _videoControllers[index]),
-                                      ),
-                                      IconButton(
-                                        icon: Icon(
-                                          _isPlaying[index]
-                                              ? Icons.pause
-                                              : Icons.play_arrow,
-                                          color: Colors.black,
+                          : const SizedBox.shrink(),
+                      const SizedBox(height: 20),
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          children: [
+                            TextFormField(
+                              controller: _locationController,
+                              decoration: InputDecoration(
+                                labelText: "الموقع",
+                                labelStyle: TextStyle(color: Colors.teal[900]),
+                                hintStyle: TextStyle(
+                                  color: Colors.teal[900],
+                                  fontSize: 14,
+                                ),
+                                hintText: "(مكان يسهل فتحه على الخريطه)",
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide.none,
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.location_on,
+                                  color: Colors.teal[900],
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value?.isEmpty ?? true)
+                                  return "الرجاء إدخال الموقع";
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
+                            DropdownButtonFormField<String>(
+                              decoration: InputDecoration(
+                                labelText: 'رقم الطابق',
+                                labelStyle: TextStyle(color: Colors.teal[900]),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                              dropdownColor: Colors.teal[50],
+                              iconEnabledColor: Colors.teal[900],
+                              borderRadius: BorderRadius.circular(15),
+                              style: TextStyle(
+                                color: Colors.teal[900],
+                                fontSize: 16,
+                              ),
+                              value: selectedFloor,
+                              items:
+                                  [
+                                        'أرضي',
+                                        'أول',
+                                        'ثاني',
+                                        'ثالث',
+                                        'رابع',
+                                        'خامس',
+                                      ]
+                                      .map(
+                                        (floor) => DropdownMenuItem(
+                                          value: floor,
+                                          child: Align(
+                                            alignment: Alignment.centerRight,
+                                            child: Text(
+                                              floor,
+                                              style: TextStyle(
+                                                color: Colors.teal[900],
+                                              ),
+                                            ),
+                                          ),
                                         ),
-                                        onPressed: () =>
-                                            _togglePlayPause(index),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
+                                      )
+                                      .toList(),
+                              onChanged:
+                                  (value) =>
+                                      setState(() => selectedFloor = value),
                             ),
-                          )
-                        : const SizedBox.shrink(),
-
-                    const SizedBox(height: 20),
-
-                    // Address Field
-                    TextFormField(
-                      controller: _locationController,
-                      decoration: const InputDecoration(
-                        labelText: "Location",
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return "Please enter the location.";
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Description Field
-                    TextFormField(
-                      controller: _descriptionController,
-                      maxLines: 4,
-                      decoration: const InputDecoration(
-                        labelText: "Description",
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return "Please enter the description.";
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Phone Number Field
-                    TextFormField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                        labelText: "Phone Number",
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return "Please enter the phone number.";
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    // Rent Amount Field
-                    TextFormField(
-                      controller: _rentAmountController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: "Rent Amount",
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return "Please enter the Rent Amount.";
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Sale Amount (Optional) Field
-                    TextFormField(
-                      controller: _saleAmountController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: "Sale Amount (Optional)",
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-
-                    // Submit Button
-                    Center(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          await editRealstate();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color.fromARGB(157, 42, 202, 181),
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 15, horizontal: 50),
+                            const SizedBox(height: 20),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'عدد الغرف',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.teal[900],
+                                  ),
+                                ),
+                                Wrap(
+                                  spacing: 10,
+                                  children:
+                                      [1, 2, 3, 4, 5]
+                                          .map(
+                                            (room) => ChoiceChip(
+                                              label: Text('$room'),
+                                              selected: selectedRooms == room,
+                                              onSelected:
+                                                  (selected) => setState(
+                                                    () =>
+                                                        selectedRooms =
+                                                            selected
+                                                                ? room
+                                                                : null,
+                                                  ),
+                                            ),
+                                          )
+                                          .toList(),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            DropdownButtonFormField<String>(
+                              decoration: InputDecoration(
+                                labelText: 'واجهة العقار',
+                                labelStyle: TextStyle(color: Colors.teal[900]),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                              dropdownColor: Colors.teal[50],
+                              iconEnabledColor: Colors.teal[900],
+                              borderRadius: BorderRadius.circular(15),
+                              style: TextStyle(
+                                color: Colors.teal[900],
+                                fontSize: 16,
+                              ),
+                              value: selectedDirection,
+                              items:
+                                  [
+                                        'بحري',
+                                        'قبلي',
+                                        'غربي',
+                                        'شرقي',
+                                        'بحري غربي',
+                                        'قبلي شرقي',
+                                        'بحري شرقي',
+                                        'قبلي غربي',
+                                      ]
+                                      .map(
+                                        (dir) => DropdownMenuItem(
+                                          value: dir,
+                                          child: Align(
+                                            alignment: Alignment.centerRight,
+                                            child: Text(
+                                              dir,
+                                              style: TextStyle(
+                                                color: Colors.teal[900],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                              onChanged:
+                                  (value) =>
+                                      setState(() => selectedDirection = value),
+                            ),
+                            const SizedBox(height: 20),
+                            TextFormField(
+                              controller: _descriptionController,
+                              maxLines: 4,
+                              decoration: InputDecoration(
+                                labelText: "الوصف",
+                                labelStyle: TextStyle(color: Colors.teal[900]),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value?.isEmpty ?? true)
+                                  return "الرجاء إدخال الوصف";
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
+                            TextFormField(
+                              controller: _phoneController,
+                              keyboardType: TextInputType.phone,
+                              decoration: InputDecoration(
+                                labelText: "رقم الهاتف",
+                                labelStyle: TextStyle(color: Colors.teal[900]),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide.none,
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.phone,
+                                  color: Colors.teal[900],
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value?.isEmpty ?? true)
+                                  return "الرجاء إدخال رقم الهاتف";
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
+                            TextFormField(
+                              controller: _rentAmountController,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                labelText: "تكلفة الإيجار",
+                                hintText: "يتم خصم 10% من قيمه الايجار رسوم",
+                                hintStyle: TextStyle(
+                                  color: Colors.teal[900],
+                                  fontSize: 14,
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey[300]!,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey[300]!,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide(
+                                    color: Colors.teal[900]!,
+                                  ),
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.attach_money,
+                                  color: Colors.teal[900],
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value?.isEmpty ?? true)
+                                  return "الرجاء إدخال التكلفة";
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 30),
+                            Center(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder:
+                                        (ctx) => AlertDialog(
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              15,
+                                            ),
+                                          ),
+                                          backgroundColor: Colors.teal[50],
+                                          title: Text(
+                                            'تأكيد',
+                                            style: TextStyle(
+                                              color: Colors.teal[900],
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          content: Text(
+                                            'هل أنت متأكد من تعديل العقار؟',
+                                            style: TextStyle(
+                                              color: Colors.teal[900],
+                                            ),
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed:
+                                                  () => Navigator.of(
+                                                    ctx,
+                                                  ).pop(false),
+                                              child: Text(
+                                                'إلغاء',
+                                                style: TextStyle(
+                                                  color: Colors.teal[900],
+                                                ),
+                                              ),
+                                            ),
+                                            ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    Colors.teal[800],
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                              ),
+                                              onPressed:
+                                                  () => Navigator.of(
+                                                    ctx,
+                                                  ).pop(true),
+                                              child: Text(
+                                                'متأكد',
+                                                style: TextStyle(
+                                                  color: Colors.teal[50],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                  );
+                                  if (confirmed == true) await editRealstate();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.teal[800],
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 15,
+                                    horizontal: 120,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(
+                                  "حفظ التعديلات",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.teal[50],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        child: const Text(
-                          "Edit",
-                          style: TextStyle(fontSize: 16 , color: Colors.white),
-                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
     );
   }
 }

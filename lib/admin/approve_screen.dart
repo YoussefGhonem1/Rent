@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:rento/chat/chat_screen.dart';
+import 'package:rento/admin/control_admin.dart';
+import 'package:rento/chatadmin/AdminChatList.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
 import 'package:rento/renter/details.dart';
 import '../auth/login.dart';
 import '../crud.dart';
+import '../owner/add_prop.dart';
 import '../renter/favorites.dart';
-import 'add_prop.dart';
-import 'edit_prop.dart';
-import 'home_owner.dart';
+import 'home_admin.dart';
 
-class OwnerRealstate extends StatefulWidget {
-  const OwnerRealstate({super.key});
+class Approve extends StatefulWidget {
+  const Approve({super.key});
 
   @override
-  State<OwnerRealstate> createState() => _OwnerRealstateState();
+  State<Approve> createState() => _ApproveState();
 }
 
 //with Crud
-class _OwnerRealstateState extends State<OwnerRealstate> {
+class _ApproveState extends State<Approve> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   TextEditingController searchController = TextEditingController();
   final Crud _crud = Crud();
@@ -27,19 +27,16 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
   List filteredProperties = [];
 
   getRealstates() async {
-    var response = await _crud.postRequest(linkViewOwnerRealstates, {
-      "owner_id": sharedPref.getString("id").toString(),
-    });
-    if (response["status"] == "success") {
+    var response = await _crud.postRequest(linkGetNotApprove, {});
+    if (response['status'] == 'success') {
       setState(() {
         allProperties = response['data'];
         filteredProperties = List.from(
           allProperties,
         ); // نسخ البيانات إلى filteredProperties
-        favoriteProperties = List<int>.from(
-          response["favorites"].map((id) => id),
-        );
       });
+    } else {
+      print("🔴 Failed to load properties: ${response['message']}");
     }
     return response;
   }
@@ -69,25 +66,10 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
     print("✅ Found ${filteredProperties.length} matching properties.");
   }
 
-  void loadFavorites() async {
-    var response = await _crud.postRequest(linkGetFav, {
-      "user_id": sharedPref.getString("id").toString(),
-    });
-
-    if (response["status"] == "success") {
-      setState(() {
-        favoriteProperties = List<int>.from(
-          response["favorites"].map((id) => id),
-        );
-      });
-    }
-  }
-
   @override
   void initState() {
     super.initState();
     getRealstates();
-    loadFavorites();
   }
 
   @override
@@ -107,11 +89,11 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
         title: Row(
           children: [
             Text(
-              "Rent",
+              "RENT",
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
-                color:  Colors.teal[50],
+                color: Colors.teal[50],
               ),
             ),
             SizedBox(width: 100),
@@ -125,7 +107,7 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
                   border: InputBorder.none,
                 ),
                 style: TextStyle(color: Colors.white),
-                onChanged: filterSearch,
+                onChanged: filterSearch, // تحديث البحث عند تغيير النص
               ),
             ),
           ],
@@ -140,8 +122,15 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
               child:
                   allProperties.isEmpty
                       ? Center(
-                        child: Center(child: Text("لا يوجد عقارات متاحة")),
-                      ) // عرض مؤشر تحميل أثناء جلب البيانات
+                        child: Text(
+                          "لا يوجد طلبات تاكيد",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[800],
+                          ),
+                        ),
+                      )
                       : filteredProperties.isEmpty
                       ? Center(
                         child: Text("لا يوجد عقارات متاحة"),
@@ -190,14 +179,15 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
                                         state: '${property['property_state']}',
                                         latitude: '${property['latitude']}',
                                         longitude: '${property['longitude']}',
-                                         floor_number:   '${property['floor_number']}',
-                                          room_count:  '${property['room_count']}',
-                                          property_direction:  '${property['property_direction']}',
-                                        rating:'${property['rate']}',
+                                        floor_number:
+                                            '${property['floor_number']}',
+                                        room_count: '${property['room_count']}',
+                                        property_direction:
+                                            '${property['property_direction']}',
+                                        rating: '${property['rate']}',
                                       ),
                                 ),
                               );
-                              loadFavorites();
                             },
                             child: Container(
                               decoration: BoxDecoration(
@@ -303,26 +293,32 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
                                         children: [
                                           Flexible(
                                             child: ElevatedButton.icon(
-                                              onPressed: () {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder:
-                                                        (context) =>
-                                                            EditRealEstatePage(
-                                                              realdata:
-                                                                  property,
-                                                            ),
-                                                  ),
-                                                );
+                                              onPressed: () async {
+                                                var response = await _crud
+                                                    .postRequest(linkApprove, {
+                                                      "id":
+                                                          property['id']
+                                                              .toString(),
+                                                    });
+                                                if (response['status'] ==
+                                                    "success") {
+                                                  Navigator.pushReplacement(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder:
+                                                          (context) =>
+                                                              Approve(),
+                                                    ),
+                                                  );
+                                                }
                                               },
                                               icon: const Icon(
-                                                Icons.mode_edit_outlined,
+                                                Icons.approval_outlined,
                                                 size: 18,
                                                 color: Colors.white,
                                               ),
                                               label: const Text(
-                                                'تعديل',
+                                                'موافق',
                                                 style: TextStyle(
                                                   color: Colors.white,
                                                   fontSize: 15,
@@ -335,7 +331,7 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
                                                       vertical: 8,
                                                     ),
                                                 backgroundColor:
-                                                    Colors.teal[800],
+                                                    Colors.teal.shade900,
                                                 textStyle: const TextStyle(
                                                   fontSize: 12,
                                                 ),
@@ -359,7 +355,7 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
                                                     MaterialPageRoute(
                                                       builder:
                                                           (context) =>
-                                                              OwnerRealstate(),
+                                                              Approve(),
                                                     ),
                                                   );
                                                 }
@@ -373,7 +369,7 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
                                                 'حذف',
                                                 style: TextStyle(
                                                   color: Colors.white,
-                                                  fontSize: 15
+                                                  fontSize: 15,
                                                 ),
                                               ),
                                               style: ElevatedButton.styleFrom(
@@ -405,14 +401,17 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => AddRealEstatePage()),
-          );
+        onPressed: () async {
+          var response = await _crud.postRequest(linkUpdateStatus, {});
+          if (response['status'] == "success") {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => Approve()),
+            );
+          }
         },
-        backgroundColor:  Colors.teal[800],
-         child: Text("اضافه" ,  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.teal[50],),)
+        backgroundColor: Colors.teal[800],
+        child: Text("update" ,  style: TextStyle( fontSize: 14, color: Colors.teal[50],),)
       ),
     );
   }
@@ -471,7 +470,7 @@ class _CustomDrawer extends StatelessWidget {
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (context) => HomeOwner()),
+                        MaterialPageRoute(builder: (context) => HomeAdmin()),
                       );
                     },
                   ),
@@ -481,14 +480,10 @@ class _CustomDrawer extends StatelessWidget {
                     title: "حساب", // "Account" in Arabic
                     icon: Icons.account_circle,
                     onTap: () {
-                      if (sharedPref.getString("type").toString() == "owner") {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => OwnerRealstate(),
-                          ),
-                        );
-                      }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => ControlAdmin()),
+                      );
                     },
                   ),
                   const Divider(color: Colors.white54, height: 10),
@@ -513,47 +508,30 @@ class _CustomDrawer extends StatelessWidget {
                   const Divider(color: Colors.white54, height: 10),
                   _buildDrawerItem(
                     context,
-                    title: "تواصل معنا", // "Contact Us" in Arabic
-                    icon: Icons.contact_support,
-                    onTap: () async {
-                      try {
-                        var response = await _crud.postRequest(linkCreateChat, {
-                          "user_id": sharedPref.getString("id").toString(),
-                        });
-
-                        if (response['status'] == "success" &&
-                            response.containsKey('chat_id')) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) => ChatScreen(
-                                    chatId: int.parse(
-                                      response['chat_id'].toString(),
-                                    ),
-                                    userId: int.parse(
-                                      sharedPref.getString("id")!,
-                                    ),
-                                  ),
-                            ),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                response['message'] ?? "فشل إنشاء المحادثة",
-                              ),
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("حدث خطأ: ${e.toString()}")),
-                        );
-                      }
+                    title: "طلبات التاكيد", // "Favorites" in Arabic
+                    icon: Icons.approval,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => Approve()),
+                      );
                     },
                   ),
-                  SizedBox(height: 270),
+                  const Divider(color: Colors.white54, height: 10),
+                  _buildDrawerItem(
+                    context,
+                    title: "تواصل معنا", // "Contact Us" in Arabic
+                    icon: Icons.contact_support,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AdminChatList(),
+                        ),
+                      );
+                    },
+                  ),
+                  SizedBox(height: 200),
                   _buildDrawerItem(
                     context,
                     title: "تسجيل الخروج", // "Sign Out" in Arabic

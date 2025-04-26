@@ -30,8 +30,10 @@ class RealEstateDetailsPage extends StatefulWidget {
   late final String latitude;
   final String longitude;
   String state;
-
-  final double rating;
+  final String floor_number;
+  final String room_count;
+  final String property_direction;
+  final String rating;
   RealEstateDetailsPage({
     super.key,
     required this.id,
@@ -49,6 +51,9 @@ class RealEstateDetailsPage extends StatefulWidget {
     required this.owner_id,
     required this.latitude,
     required this.longitude,
+    required this.floor_number,
+    required this.room_count,
+    required this.property_direction,
   });
 
   @override
@@ -85,19 +90,23 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
     fetchPropertyState(); // جلب حالة العقار من الخادم
     checkUserBooking(); // جلب حجوزات المستخدم
 
-    _videoControllers = widget.videos.map((videoUrl) {
-      print("$linkVideoRoot/$videoUrl");
-      final controller =
-          VideoPlayerController.network("$linkVideoRoot/$videoUrl")
-            ..initialize().then((_) {
-              if (mounted) {
-                setState(() {});
-              }
-            }).catchError((error) {
-              print('Error initializing video: $error');
-            });
-      return controller;
-    }).toList();
+    _videoControllers =
+        widget.videos.map((videoUrl) {
+          print("$linkVideoRoot/$videoUrl");
+          final controller = VideoPlayerController.network(
+              "$linkVideoRoot/$videoUrl",
+            )
+            ..initialize()
+                .then((_) {
+                  if (mounted) {
+                    setState(() {});
+                  }
+                })
+                .catchError((error) {
+                  print('Error initializing video: $error');
+                });
+          return controller;
+        }).toList();
     _videoStatus = List.generate(widget.videos.length, (index) => false);
   }
 
@@ -163,33 +172,120 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
   Widget buildUserBookings() {
     return userBookings.isNotEmpty
         ? Padding(
-            padding: EdgeInsets.all(10),
-            child: Column(
-              children: userBookings.map((booking) {
-                return Card(
-                  color: Colors.amber[100], // لون خلفية هادئ
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: ListTile(
-                    leading: Icon(Icons.calendar_today, color: Colors.orange),
-                    title: Text(
-                      "📅 من ${booking['start_date']} إلى ${booking['end_date']}",
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          padding: EdgeInsets.all(10),
+          child: Column(
+            children:
+                userBookings.map((booking) {
+                  return Card(
+                    color: Colors.amber[100], // لون خلفية هادئ
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    trailing: IconButton(
-                      icon: Icon(Icons.cancel, color: Colors.red),
-                      onPressed: () async {
-                        await cancelBooking(
-                            booking['start_date'], booking['end_date']);
-                      },
+                    child: Directionality(
+                      textDirection: TextDirection.rtl,
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.calendar_today,
+                          color: Colors.teal[900],
+                        ),
+                        title: Column(
+                          children: [
+                            Text(
+                              " من ${booking['start_date']} ",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.teal[900],
+                              ),
+                            ),
+                            Text(
+                              "إلى ${booking['end_date']}",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.teal[900],
+                              ),
+                            ),
+                          ],
+                        ),
+                        trailing: IconButton(
+                          icon: Icon(Icons.cancel, color: Colors.red),
+                          onPressed: () async {
+                            // عرض مربع الحوار
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              barrierDismissible:
+                                  false, // لمنع الإغلاق بالضغط خارج الصندوق
+                              builder:
+                                  (ctx) => AlertDialog(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    backgroundColor: Colors.teal[50],
+                                    title: Text(
+                                      'تأكيد',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.teal[900],
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    content: Text(
+                                      'هل أنت متأكد من الغاء حجز العقار؟',
+                                      style: TextStyle(color: Colors.teal[900]),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    actionsAlignment: MainAxisAlignment.center,
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.of(ctx).pop(false);
+                                        },
+                                        child: Text(
+                                          'إلغاء',
+                                          style: TextStyle(
+                                            color: Colors.teal[900],
+                                          ),
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.teal[800],
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                        ),
+                                        onPressed: () {
+                                          Navigator.of(ctx).pop(true);
+                                        },
+                                        child: Text(
+                                          'متأكد',
+                                          style: TextStyle(
+                                            color: Colors.teal[50],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                            );
+
+                            // إذا اختار "متأكد" ننفذ الإضافة
+                            if (confirmed == true) {
+                              await cancelBooking(
+                                booking['start_date'],
+                                booking['end_date'],
+                              );
+                            }
+                          },
+                        ),
+                      ),
                     ),
-                  ),
-                );
-              }).toList(),
-            ),
-          )
+                  );
+                }).toList(),
+          ),
+        )
         : SizedBox.shrink(); // لا يعرض شيئًا إذا لم يكن هناك حجوزات
   }
 
@@ -205,22 +301,21 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
       await checkUserBooking(); // تحديث قائمة الحجوزات
       await fetchPropertyState(); // تحديث حالة العقار
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("✅ تم إلغاء الحجز بنجاح")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("✅ تم إلغاء الحجز بنجاح")));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("⚠ فشل في إلغاء الحجز")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("⚠ فشل في إلغاء الحجز")));
     }
   }
 
   Future<void> checkAvailability() async {
     try {
-      var response = await _crud.postRequest(
-        linkCheckAvailability,
-        {'property_id': widget.id},
-      );
+      var response = await _crud.postRequest(linkCheckAvailability, {
+        'property_id': widget.id,
+      });
 
       if (response['status'] == "unavailable") {
         List reservations = response['reservations'] ?? [];
@@ -244,34 +339,42 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
 
   Widget _showUnavailableDatesDialog(List reservations) {
     return AlertDialog(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.teal[900],
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      title: Text(
-        "Booked Dates",
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 18,
-          color: Color.fromARGB(157, 42, 202, 181),
+      title: Center(
+        child: Text(
+          "تاريج حجز العقار",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: Colors.teal[50],
+          ),
         ),
       ),
-      content: reservations.isEmpty
-          ? Text("No booked dates found.")
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              children: reservations.map((res) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 5),
-                  child: Text(
-                    "📅 ${res['start_date']} → ${res['end_date']}",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                );
-              }).toList(),
-            ),
+      content:
+          reservations.isEmpty
+              ? Text("No booked dates found.")
+              : Column(
+                mainAxisSize: MainAxisSize.min,
+                children:
+                    reservations.map((res) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 5),
+                        child: Text(
+                          "📅 ${res['start_date']} → ${res['end_date']}",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[50],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+              ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text("Close", style: TextStyle(color: Colors.grey[700])),
+          child: Text("Close", style: TextStyle(color: Colors.teal[50])),
         ),
       ],
     );
@@ -282,25 +385,34 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
     DateTime startDate = minStartDate;
     DateTime endDate = startDate.add(Duration(days: 1));
     int numberOfDays = calculateNumberOfDays(startDate, endDate);
-    double totalPrice =
-        calculateTotalPrice(numberOfDays, double.parse(widget.price));
+    double totalPrice = calculateTotalPrice(
+      numberOfDays,
+      double.parse(widget.price),
+    );
 
     return StatefulBuilder(
       builder: (context, setDialogState) {
         return AlertDialog(
-          backgroundColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-          title: Text(
-            "Select Booking Dates",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          backgroundColor: Colors.teal[900],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: Center(
+            child: Text(
+              "اختار تاريخ الحجز",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.teal[50],
+              ),
+            ),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildDatePickerButton(
                 context,
-                label: "Start Date",
+                label: "تاريخ البدء",
                 date: startDate,
                 minDate: minStartDate,
                 onDateSelected: (picked) {
@@ -312,14 +424,16 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
                     }
                     numberOfDays = calculateNumberOfDays(startDate, endDate);
                     totalPrice = calculateTotalPrice(
-                        numberOfDays, double.parse(widget.price));
+                      numberOfDays,
+                      double.parse(widget.price),
+                    );
                   });
                 },
               ),
               const SizedBox(height: 10),
               _buildDatePickerButton(
                 context,
-                label: "End Date",
+                label: "تاريخ الانتهاء",
                 date: endDate,
                 minDate: startDate.add(Duration(days: 1)),
                 onDateSelected: (picked) {
@@ -332,26 +446,39 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
                       numberOfDays = calculateNumberOfDays(startDate, endDate);
                     }
                     totalPrice = calculateTotalPrice(
-                        numberOfDays, double.parse(widget.price));
+                      numberOfDays,
+                      double.parse(widget.price),
+                    );
                   });
                 },
               ),
               const SizedBox(height: 10),
+              const Divider(color: Colors.white54, height: 10),
+              const SizedBox(height: 5),
               Text(
-                "Total Price: ${totalPrice.toStringAsFixed(2)} L.E",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                "اجمالى التكلفه : ${totalPrice.toStringAsFixed(2)} ج.م",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.teal[50],
+                ),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text("Cancel", style: TextStyle(color: Colors.grey[700])),
+              child: Text(
+                "انهاء",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.teal[50],
+                ),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color.fromARGB(157, 42, 202, 181),
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.teal[50]),
               onPressed: () async {
                 String userId = sharedPref.getString("id").toString();
                 String propertyOwnerId =
@@ -365,12 +492,24 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
                   Navigator.pop(context); // Close the booking dialog
                   showDialog(
                     context: context,
-                    builder: (context) => _showPaymentOptionsDialog(
-                        widget.id, startDate, endDate, totalPrice),
+                    builder:
+                        (context) => _showPaymentOptionsDialog(
+                          widget.id,
+                          startDate,
+                          endDate,
+                          totalPrice,
+                        ),
                   );
                 }
               },
-              child: Text("Confirm", style: TextStyle(color: Colors.white)),
+              child: Text(
+                "تاكيد",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.teal[900],
+                ),
+              ),
             ),
           ],
         );
@@ -378,33 +517,37 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
     );
   }
 
-//  دالة مساعدة لإنشاء زر تحديد التاريخ بتصميم متناسق
-  Widget _buildDatePickerButton(BuildContext context,
-      {required String label,
-      required DateTime date,
-      required DateTime minDate,
-      required Function(DateTime) onDateSelected}) {
+  //  دالة مساعدة لإنشاء زر تحديد التاريخ بتصميم متناسق
+  Widget _buildDatePickerButton(
+    BuildContext context, {
+    required String label,
+    required DateTime date,
+    required DateTime minDate,
+    required Function(DateTime) onDateSelected,
+  }) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Text(
           label,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Colors.grey[700],
+            color: Colors.teal[50],
           ),
         ),
         const SizedBox(height: 5),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color.fromARGB(157, 42, 202, 181),
-            foregroundColor: Colors.white,
+            backgroundColor: Colors.teal[50],
+            foregroundColor: Colors.teal[900],
             padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
               side: BorderSide(
-                  color: Color.fromARGB(157, 42, 202, 181), width: 1.5),
+                color: Color.fromARGB(157, 42, 202, 181),
+                width: 1.5,
+              ),
             ),
           ),
           onPressed: () async {
@@ -428,7 +571,10 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
   }
 
   Future<void> bookProperty(
-      String propertyId, DateTime start, DateTime end) async {
+    String propertyId,
+    DateTime start,
+    DateTime end,
+  ) async {
     try {
       var response = await _crud.postRequest(linkBookProperty, {
         'user_id': sharedPref.getString("id").toString(),
@@ -444,8 +590,10 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
         // عرض رسالة نجاح الحجز
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(
-                  "✅ تم الحجز من ${start.toIso8601String().split('T')[0]} إلى ${end.toIso8601String().split('T')[0]}")),
+            content: Text(
+              "✅ تم الحجز من ${start.toIso8601String().split('T')[0]} إلى ${end.toIso8601String().split('T')[0]}",
+            ),
+          ),
         );
 
         // تحديث واجهة المستخدم
@@ -454,15 +602,15 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
         }
       } else {
         // عرض رسالة فشل الحجز
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("⚠ فشل في الحجز")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("⚠ فشل في الحجز")));
       }
     } catch (e) {
       // عرض رسالة خطأ
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ حدث خطأ: ${e.toString()}")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("❌ حدث خطأ: ${e.toString()}")));
     }
   }
 
@@ -547,9 +695,9 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
         print("✅ الدفع عند الاستلام: تحويل $depositAmount L.E");
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("✅ تمت عملية الدفع بنجاح")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("✅ تمت عملية الدفع بنجاح")));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("❌ فشلت عملية الدفع: ${e.toString()}")),
@@ -558,33 +706,69 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
   }
 
   Widget _showPaymentOptionsDialog(
-      String propertyId, DateTime start, DateTime end, double totalPrice) {
+    String propertyId,
+    DateTime start,
+    DateTime end,
+    double totalPrice,
+  ) {
     return AlertDialog(
-      title: Text("اختر طريقة الدفع"),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            title: Text("الدفع الإلكتروني"),
-            subtitle:
-                Text("المبلغ الإجمالي: ${totalPrice.toStringAsFixed(2)} L.E"),
-            onTap: () async {
-              Navigator.pop(context);
-              await processPayment(PaymentMethod.online, totalPrice);
-              await bookProperty(propertyId, start, end);
-            },
+      backgroundColor: Colors.teal[900],
+      title: Center(
+        child: Text(
+          "اختر طريقة الدفع",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: Colors.teal[50],
           ),
-          ListTile(
-            title: Text("الدفع عند الاستلام"),
-            subtitle: Text(
-                "المبلغ المطلوب: ${(totalPrice * 0.1).toStringAsFixed(2)} L.E"),
-            onTap: () async {
-              Navigator.pop(context);
-              await processPayment(PaymentMethod.cashOnDelivery, totalPrice);
-              await bookProperty(propertyId, start, end);
-            },
-          ),
-        ],
+        ),
+      ),
+      content: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(
+                "الدفع الإلكتروني",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Colors.teal[50],
+                ),
+              ),
+              subtitle: Text(
+                "المبلغ الإجمالي: ${totalPrice.toStringAsFixed(2)} ج.م",
+                style: TextStyle(fontSize: 16, color: Colors.teal[50]),
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+                await processPayment(PaymentMethod.online, totalPrice);
+                await bookProperty(propertyId, start, end);
+              },
+            ),
+            const Divider(color: Colors.white54, height: 10),
+            ListTile(
+              title: Text(
+                "الدفع عند الاستلام",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Colors.teal[50],
+                ),
+              ),
+              subtitle: Text(
+                "المبلغ المطلوب: ${(totalPrice * 0.1).toStringAsFixed(2)} ج.م",
+                  style: TextStyle( fontSize: 16, color: Colors.teal[50],),
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+                await processPayment(PaymentMethod.cashOnDelivery, totalPrice);
+                await bookProperty(propertyId, start, end);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -592,20 +776,29 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.teal[50],
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back , color: Colors.white,), // أيقونة الرجوع للخلف
+          icon: Icon(
+            Icons.arrow_back,
+            color: Colors.teal[50],
+          ), // أيقونة الرجوع للخلف
           onPressed: () {
             if (widget.fav) {
               Navigator.pushReplacement(
-                  context, MaterialPageRoute(builder: (context) => Favorite()));
+                context,
+                MaterialPageRoute(builder: (context) => Favorite()),
+              );
             } else {
               Navigator.pop(context, true); // الرجوع للصفحة السابقة بشكل طبيعي
             }
-          },     
+          },
         ),
-        backgroundColor: Color.fromARGB(157, 37, 184, 164),
-        title:  Text("Property Details" , style: TextStyle(color: Colors.white ,fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.teal[800],
+        title: Text(
+          "العوده",
+          style: TextStyle(color: Colors.teal[50], fontWeight: FontWeight.bold),
+        ),
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -616,272 +809,493 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: widget.images.isNotEmpty
-                    ? widget.images.map((file) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 5),
-                          child: Image.network(
-                            "$linkImageRoot/$file",
-                            width: 200,
-                            height: 250,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) {
-                                return child;
-                              } else {
-                                return Center(
-                                    child: CircularProgressIndicator());
-                              }
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(Icons
-                                  .error); // Show an error icon if image fails to load
-                            },
-                          ),
-                        );
-                      }).toList()
-                    : [
-                        const SizedBox.shrink(),
-                      ], // Display a message if no images are available
+                children:
+                    widget.images.isNotEmpty
+                        ? widget.images.asMap().entries.map((entry) {
+                          int index = entry.key;
+                          String file = entry.value;
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 5),
+                            child: GestureDetector(
+                              onTap: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    return Dialog(
+                                      insetPadding: EdgeInsets.zero,
+                                      child: Scaffold(
+                                        appBar: AppBar(
+                                          backgroundColor: Colors.teal[800],
+                                          automaticallyImplyLeading: false,
+                                          actions: [
+                                            IconButton(
+                                              icon: Icon(
+                                                Icons.close,
+                                                color: Colors.white,
+                                              ),
+                                              onPressed:
+                                                  () => Navigator.pop(context),
+                                            ),
+                                          ],
+                                        ),
+                                        body: Center(
+                                          child: Hero(
+                                            tag:
+                                                'image_$index', // تأكد من أن ال tag فريد لكل صورة
+                                            child: Image.network(
+                                              "$linkImageRoot/$file",
+                                              fit: BoxFit.contain,
+                                              loadingBuilder: (
+                                                context,
+                                                child,
+                                                loadingProgress,
+                                              ) {
+                                                if (loadingProgress == null)
+                                                  return child;
+                                                return Center(
+                                                  child:
+                                                      CircularProgressIndicator(),
+                                                );
+                                              },
+                                              errorBuilder: (
+                                                context,
+                                                error,
+                                                stackTrace,
+                                              ) {
+                                                return Icon(Icons.error);
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                              child: Hero(
+                                tag:
+                                    'image_$index', // نفس ال tag المستخدم في ال Dialog
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Colors.teal.shade100,
+                                      width: 2,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Image.network(
+                                      "$linkImageRoot/$file",
+                                      width: 200,
+                                      height: 250,
+                                      fit: BoxFit.cover,
+                                      loadingBuilder: (
+                                        context,
+                                        child,
+                                        loadingProgress,
+                                      ) {
+                                        if (loadingProgress == null)
+                                          return child;
+                                        return Center(
+                                          child: CircularProgressIndicator(),
+                                        );
+                                      },
+                                      errorBuilder: (
+                                        context,
+                                        error,
+                                        stackTrace,
+                                      ) {
+                                        return Icon(Icons.error);
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList()
+                        : [const SizedBox.shrink()],
               ),
             ),
 
             const SizedBox(height: 10),
+            Divider(color: Colors.teal[800], height: 10),
+            const SizedBox(height: 5),
 
-            // Display videos with play/pause functionality
-            /*    if (widget.videos.isNotEmpty)
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: List.generate(widget.videos.length, (index) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 5),
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 200,
-                            height: 250,
-                            color: Colors.black,
-                            child: _videoControllers[index].value.isInitialized
-                                ? VideoPlayer(_videoControllers[index])
-                                : Center(child: CircularProgressIndicator()),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              _videoStatus[index]
-                                  ? Icons.pause
-                                  : Icons.play_arrow,
-                              color: Colors.black,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                if (_videoStatus[index]) {
-                                  _videoControllers[index].pause();
-                                } else {
-                                  _videoControllers[index].play();
-                                }
-                                _videoStatus[index] = !_videoStatus[index];
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ),
-              ), */
-            /* const SizedBox(height: 10), */
             // Property Title, Price, and Location
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    widget.title,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Text(
-                        "daily price: ",
-                        style: TextStyle(
-                          fontSize: 20,
-                        ),
-                      ),
-                      Text(
-                        widget.price,
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: Colors.orange.shade700,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        " L.E",
-                        style: TextStyle(
-                          fontSize: 17,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 10),
-                  InkWell(
-                    onTap: () async {
-                      await OpenMap(location: widget.location      );
-                    },
+                  Directionality(
+                    textDirection: TextDirection.rtl,
                     child: Row(
                       children: [
-                        const Icon(Icons.location_on, color: Colors.grey),
-                        const SizedBox(width: 5),
+                        Icon(
+                          Icons.location_on,
+                          color: Colors.teal[900],
+                          size: 30,
+                        ),
+                        SizedBox(width: 2),
                         Text(
-                          widget.location,
-                          style:
-                              const TextStyle(fontSize: 16, color: Colors.grey),
+                          'المكان',
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[900],
+                          ),
+                        ),
+                        SizedBox(width: 2),
+                        Text(
+                          ' : ${widget.title}',
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[900],
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
 
-                  Row(
-                    children: [
-                      const Text(
-                        "Status: ",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                  Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.attach_money,
+                          color: Colors.teal[900],
+                          size: 28,
                         ),
-                      ),
-                      ValueListenableBuilder<String>(
-                        valueListenable: stateNotifier,
-                        builder: (context, state, child) {
-                          return Row(children: [
-                            Text(
-                              state == "available" ? "Available" : "Booked",
+                        SizedBox(width: 2),
+                        Text(
+                          "السعر : ",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[900],
+                          ),
+                        ),
+                        Text(
+                          widget.price,
+                          style: TextStyle(
+                            fontSize: 20,
+                            color: Colors.orange.shade700,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(width: 5),
+                        Text(
+                          "ج.م",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[900],
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          "(تكلفه اليوم الواحد)",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[900],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+                  //الحاله
+                  Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Row(
+                      children: [
+                        SizedBox(width: 10),
+                        Text(
+                          "الحاله : ",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[900],
+                          ),
+                        ),
+                        ValueListenableBuilder<String>(
+                          valueListenable: stateNotifier,
+                          builder: (context, state, child) {
+                            return Row(
+                              children: [
+                                Text(
+                                  state == "available"
+                                      ? "متاح"
+                                      : "محجوز لفترات",
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    color:
+                                        state == "available"
+                                            ? Colors.teal[900]
+                                            : Colors.red,
+
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                state == "booked"
+                                    ? TextButton(
+                                      onPressed: () async {
+                                        await checkAvailability();
+                                      },
+                                      child: Text(
+                                        "عرض تاريح الحجز",
+                                        style: TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    )
+                                    : Text(""),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Row(
+                      children: [
+                        SizedBox(width: 10),
+                        Text(
+                          "الطابق(الدور) :",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[900],
+                          ),
+                        ),
+                        SizedBox(width: 5),
+                        Text(
+                          widget.floor_number,
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[900],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Row(
+                      children: [
+                        SizedBox(width: 10),
+                        Text(
+                          "عدد الغرف :",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[900],
+                          ),
+                        ),
+                        SizedBox(width: 5),
+                        Text(
+                          widget.room_count,
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[900],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  // Rating
+                  Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Row(
+                      children: [
+                        SizedBox(width: 10),
+                        Text(
+                          "واجهه العقار :",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[900],
+                          ),
+                        ),
+                        SizedBox(width: 5),
+                        Text(
+                          widget.property_direction,
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[900],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 10),
+                        Text(
+                          "التقييم :",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[900],
+                          ),
+                        ),
+                        SizedBox(width: 5),
+                        widget.rating == "null"
+                            ? Text(
+                              "لا تقييم",
                               style: TextStyle(
-                                fontSize: 16,
-                                color: state == "available"
-                                    ? Colors.green
-                                    : Colors.red,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.teal[900],
+                              ),
+                            )
+                            : Text(
+                              widget.rating,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.teal[900],
                               ),
                             ),
-                            state == "booked"
-                                ? TextButton(
-                                    onPressed: () async {
-                                      await checkAvailability();
-                                    },
-                                    child: Text(
-                                      "View Booked Dates",
-                                      style: TextStyle(
-                                        color: Colors.red,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  )
-                                : Text(""),
-                          ]);
+                        SizedBox(width: 3),
+
+                        Icon(Icons.star, color: Colors.amber, size: 20),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Description
+                  Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Text(
+                      "  الوصف :",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal[900],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+                  Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Row(
+                      children: [
+                        SizedBox(width: 10),
+                        Text(
+                          widget.description,
+                          style: TextStyle(
+                            fontSize: 16,
+
+                            color: Colors.teal[900],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            await OpenMap(location: widget.location);
+                          },
+
+                          label: Text(
+                            'عرض على الخريطه',
+                            style: TextStyle(
+                              color: Colors.teal[50],
+                              fontSize: 14,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            backgroundColor: Colors.teal.shade900,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 180),
+                      IconButton(
+                        icon: AnimatedSwitcher(
+                          duration: Duration(milliseconds: 300),
+                          transitionBuilder:
+                              (child, animation) => ScaleTransition(
+                                scale: animation,
+                                child: child,
+                              ),
+                          child: Icon(
+                            isFavorite(int.parse(widget.id))
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            key: ValueKey<bool>(
+                              isFavorite(int.parse(widget.id)),
+                            ),
+                            color:
+                                isFavorite(int.parse(widget.id))
+                                    ? Colors.red
+                                    : Colors.teal[900],
+                          ),
+                        ),
+                        onPressed: () async {
+                          await toggleFavorite(int.parse(widget.id));
+                          isFavorite(int.parse(widget.id));
                         },
                       ),
                     ],
                   ),
 
                   const SizedBox(height: 10),
-
-                  // Rating
-                  Row(
-                    children: [
-                      const Text(
-                        "Rating: ",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Icon(Icons.star, color: Colors.amber, size: 20),
-                      Text(
-                        widget.rating.toStringAsFixed(1),
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Description
-                  const Text(
-                    "Description:",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    widget.description,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-
-                  const SizedBox(height: 20),
-                  IconButton(
-                    icon: AnimatedSwitcher(
-                      duration: Duration(milliseconds: 300),
-                      transitionBuilder: (child, animation) =>
-                          ScaleTransition(scale: animation, child: child),
-                      child: Icon(
-                        isFavorite(int.parse(widget.id))
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        key: ValueKey<bool>(isFavorite(int.parse(widget.id))),
-                        color: isFavorite(int.parse(widget.id))
-                            ? Colors.red
-                            : Colors.grey,
-                      ),
-                    ),
-                    onPressed: () async {
-                      await toggleFavorite(int.parse(widget.id));
-                      isFavorite(int.parse(widget.id));
-                    },
-                  ),
-
-                  const SizedBox(height: 10),
-                  /*  if (userBookingMessage.isNotEmpty)
-                    Padding(
-                      padding: EdgeInsets.all(10),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.amber[100], // لون خلفية هادئ
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: EdgeInsets.all(10),
-                        child: Row(
-                          children: [
-                            Icon(Icons.info, color: Colors.orange),
-                            SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                userBookingMessage,
-                                style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ), */
-
                   buildUserBookings(), // ✅ عرض حجوزات المستخدم هنا
                   const SizedBox(height: 20),
 
                   Center(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.white, backgroundColor: Color.fromARGB(157, 42, 202, 181),
+                        foregroundColor: Colors.teal[50],
+                        backgroundColor: Colors.teal[900],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 130,
+                        ),
                       ),
                       onPressed: () {
                         showDialog(
@@ -890,8 +1304,8 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
                         );
                       },
                       child: const Text(
-                        "Book Now",
-                        style: TextStyle(fontSize: 18),
+                        "احجز الان",
+                        style: TextStyle(fontSize: 20),
                       ),
                     ),
                   ),

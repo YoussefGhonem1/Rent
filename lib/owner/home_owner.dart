@@ -26,6 +26,13 @@ class _HomeOwnerState extends State<HomeOwner> {
   List allProperties = [];
   List filteredProperties = [];
   String selectedPriceFilter = "All"; // الفلتر الافتراضي
+  bool showNameSearch = false;
+  bool showPriceSearch = false;
+  double? minPrice;
+  double? maxPrice;
+  TextEditingController nameSearchController = TextEditingController();
+  TextEditingController fromPriceController = TextEditingController();
+  TextEditingController toPriceController = TextEditingController();
 
   getRealstates() async {
     var response = await _crud.postRequest(linkView, {});
@@ -59,77 +66,79 @@ class _HomeOwnerState extends State<HomeOwner> {
     getRealstates();
   }
 
-  void filterSearch(String query) {
+  void filterByName(String query) {
     setState(() {
       filteredProperties =
           allProperties.where((property) {
-            bool matchesSearch =
-                query.isEmpty ||
+            return query.isEmpty ||
                 (property['address'] != null &&
                     property['address'].toString().toLowerCase().contains(
                       query.toLowerCase(),
                     ));
-
-            // التأكد من أن rent_amount متاح وقابل للتحويل إلى رقم
-            double rentAmount =
-                double.tryParse(property['rent_amount'].toString()) ?? 0;
-
-            bool matchesPrice =
-                selectedPriceFilter == "All" ||
-                (selectedPriceFilter == "<500" && rentAmount < 500) ||
-                (selectedPriceFilter == "500-1000" &&
-                    rentAmount >= 500 &&
-                    rentAmount <= 1000) ||
-                (selectedPriceFilter == ">1000" && rentAmount > 1000);
-
-            return matchesSearch && matchesPrice;
           }).toList();
     });
   }
 
-  void updatePriceFilter(String filter) {
+  void filterByPrice(String from, String to) {
     setState(() {
-      selectedPriceFilter = filter;
-      filterSearch(searchController.text); // تحديث القائمة بعد تغيير الفلتر
+      double? min = double.tryParse(from);
+      double? max = double.tryParse(to);
+
+      filteredProperties =
+          allProperties.where((property) {
+            double rentAmount =
+                double.tryParse(property['rent_amount'].toString()) ?? 0;
+
+            bool matchesMin = min == null || rentAmount >= min;
+            bool matchesMax = max == null || rentAmount <= max;
+
+            return matchesMin && matchesMax;
+          }).toList();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.teal[50],
       key: _scaffoldKey,
       drawer: _CustomDrawer(),
-      appBar: AppBar(    
-        backgroundColor: Color.fromARGB(157, 37, 184, 164),
-          leading: IconButton(
-          icon: Icon(Icons.menu , color: Colors.white),
+      appBar: AppBar(
+        backgroundColor: Colors.teal[800],
+        leading: IconButton(
+          icon: Icon(Icons.menu, color:  Colors.teal[50]),
           onPressed: () {
-            _scaffoldKey.currentState!.openDrawer(); // كده تفتحه بسهولة
+            _scaffoldKey.currentState!.openDrawer();
           },
         ),
         title: Row(
           children: [
             Text(
-              "RENT",
+              "Rent",
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
-                color: Colors.white,
+                color:  Colors.teal[50],
               ),
             ),
-            SizedBox(width: 100),
-            Expanded(
-              child: TextField(
-                controller: searchController,
-                decoration: InputDecoration(
-                  hintText: "ابحث عن عقار",
-                  hintStyle: TextStyle(color: Colors.white70),
-                  prefixIcon: Icon(Icons.search, color: Colors.white70),
-                  border: InputBorder.none,
-                ),
-                style: TextStyle(color: Colors.white),
-                onChanged: filterSearch,
-              ),
+            Spacer(),
+            IconButton(
+              icon: Icon(Icons.search, color:  Colors.teal[50]),
+              onPressed: () {
+                setState(() {
+                  showNameSearch = !showNameSearch;
+                  showPriceSearch = false;
+                });
+              },
+            ),
+            IconButton(
+              icon: Icon(Icons.filter_alt, color:  Colors.teal[50]),
+              onPressed: () {
+                setState(() {
+                  showPriceSearch = !showPriceSearch;
+                  showNameSearch = false;
+                });
+              },
             ),
           ],
         ),
@@ -138,41 +147,153 @@ class _HomeOwnerState extends State<HomeOwner> {
         padding: const EdgeInsets.all(10),
         child: ListView(
           children: [
-            // 🔹 إضافة عنوان للفلترة
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    "فلترة حسب السعر",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
+            if (showNameSearch)
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.teal[700], // لون الخلفية
+                  borderRadius: BorderRadius.circular(6), // زوايا مدورة
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.teal.withOpacity(0.3),
+                      spreadRadius: 2,
+                      blurRadius: 5,
+                      offset: Offset(0, 3), // ظل خفيف
                     ),
+                  ],
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(15),
+                  child: TextField(
+                    controller: nameSearchController,
+                    decoration: InputDecoration(
+                      hintText: "ابحث عن عقار بالاسم",
+                      hintStyle: TextStyle(color: Colors.teal[900]),
+                      prefixIcon: Icon(Icons.search, color: Colors.teal[900]),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.teal.shade400),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.teal.shade600),
+                      ),
+                      filled: true,
+                      fillColor: Colors.teal[50],
+                    ),
+                    style: TextStyle(color: Colors.teal[900]),
+                    onChanged: (value) {
+                      filterByName(value);
+                    },
                   ),
-                ],
+                ),
               ),
-            ),
 
-            // 🔹 الفلترة بالأسعار مع التمرير
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  SizedBox(width: 10),
-                  _buildFilterButton("All", "الكل"),
-                  SizedBox(width: 5),
-                  _buildFilterButton("<500", "أقل من 500"),
-                  SizedBox(width: 5),
-                  _buildFilterButton("500-1000", "500 - 1000"),
-                  SizedBox(width: 5),
-                  _buildFilterButton(">1000", "أكثر من 1000"),
-                  SizedBox(width: 10),
-                ],
+            // حقل البحث بالسعر
+            if (showPriceSearch)
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.teal[700], // الخلفية البيضاء للبوكس
+                  borderRadius: BorderRadius.circular(6), // زوايا مدورة
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.3),
+                      spreadRadius: 2,
+                      blurRadius: 5,
+                      offset: Offset(0, 3), // ظل خفيف
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(15),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        "البحث حسب السعر  (متاح اضافه سعر واحد)",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.teal[50],
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: fromPriceController,
+                              decoration: InputDecoration(
+                                labelText: "من",
+                                labelStyle: TextStyle(color: Colors.teal[900]),
+                                border: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: Colors.teal.shade900,
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: Colors.teal.shade900,
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: Colors.teal[50],
+                              ),
+                              style: TextStyle(color: Colors.teal[900]),
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: toPriceController,
+                              decoration: InputDecoration(
+                                labelText: "إلى",
+                                labelStyle: TextStyle(color: Colors.teal[900]),
+                                border: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: Colors.teal.shade900,
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: Colors.teal.shade900,
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: Colors.teal[50],
+                              ),
+                              style: TextStyle(color: Colors.teal[900]),
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          ElevatedButton(
+                            onPressed: () {
+                              filterByPrice(
+                                fromPriceController.text,
+                                toPriceController.text,
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.teal[50],
+                              foregroundColor: Colors.teal[900],
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                            ),
+                            child: Text("بحث"),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
 
             SizedBox(height: 10), // مسافة قبل عرض العقارات
             // 🔹 عرض العقارات بعد الفلترة
@@ -186,7 +307,7 @@ class _HomeOwnerState extends State<HomeOwner> {
                     crossAxisCount: 2,
                     crossAxisSpacing: 10,
                     mainAxisSpacing: 10,
-                    childAspectRatio: 0.75,
+                    childAspectRatio: 0.69,
                   ),
                   itemCount: filteredProperties.length,
                   itemBuilder: (context, index) {
@@ -212,7 +333,10 @@ class _HomeOwnerState extends State<HomeOwner> {
                                   state: '${property['property_state']}',
                                   latitude: '${property['latitude']}',
                                   longitude: '${property['longitude']}',
-                                  rating: 0.0,
+                                   floor_number:   '${property['floor_number']}',
+                                          room_count:  '${property['room_count']}',
+                                          property_direction:  '${property['property_direction']}',
+                                  rating:'${property['rate']}',
                                 ),
                           ),
                         );
@@ -252,36 +376,10 @@ class _HomeOwnerState extends State<HomeOwner> {
                     ),
                   );
                 },
-                backgroundColor: Color.fromARGB(157, 42, 202, 181),
-                child: const Icon(Icons.add, color: Colors.white),
+                backgroundColor: Colors.teal[800],
+                child: Text("اضافه" ,  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.teal[50],),)
               )
               : Container(),
-    );
-  }
-
-  Widget _buildFilterButton(String value, String label) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 5),
-      child: ElevatedButton(
-        onPressed: () => updatePriceFilter(value),
-        style: ElevatedButton.styleFrom(
-          backgroundColor:
-              selectedPriceFilter == value
-                  ? Color.fromARGB(157, 42, 202, 181)
-                  : Colors.grey[300],
-          foregroundColor:
-              selectedPriceFilter == value ? Colors.white : Colors.black,
-          /*  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10), */
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          elevation: selectedPriceFilter == value ? 3 : 1,
-        ),
-        child: Text(
-          label,
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-      ),
     );
   }
 }
@@ -294,10 +392,11 @@ class _CustomDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      backgroundColor: Color.fromARGB(157, 42, 202, 181).withOpacity(0.5),
+      backgroundColor: Colors.teal[900], // Changed to solid teal color
       child: Container(
-        padding: const EdgeInsets.all(15),
-        child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // User Profile Section
             Row(
@@ -307,129 +406,135 @@ class _CustomDrawer extends StatelessWidget {
                   height: 70,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.white.withOpacity(0.5),
-                        blurRadius: 10,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
+                    color: Colors.white.withOpacity(0.2),
+                    border: Border.all(color: Colors.white, width: 0.3),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(70),
-                    child: Image.asset(
-                      "images/IMG_6965.PNG",
-                      fit: BoxFit.cover,
-                    ),
+                    borderRadius: BorderRadius.circular(35),
+                    child: Image.asset("images/Capture.PNG", fit: BoxFit.cover),
                   ),
                 ),
                 const SizedBox(width: 15),
-                Expanded(
-                  child: ListTile(
-                    title: Text(
-                      sharedPref.getString("username").toString(),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                        color: Colors.white, // Slightly darker text
-                      ),
-                    ),
+                Text(
+                  sharedPref.getString("username").toString(),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: Colors.teal.shade50,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            // Menu Items
-            _buildDrawerItem(
-              context,
-              title: "Home Page",
-              icon: Icons.home,
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => HomeOwner()),
-                );
-              },
-            ),
-            _buildDrawerItem(
-              context,
-              title: "Account",
-              icon: Icons.account_balance_rounded,
-              onTap: () {
-                if (sharedPref.getString("type").toString() == "owner") {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => OwnerRealstate()),
-                  );
-                }
-              },
-            ),
-            _buildDrawerItem(
-              context,
-              title: "Order",
-              icon: Icons.check_box,
-              onTap: () {},
-            ),
-            _buildDrawerItem(
-              context,
-              title: "Favourites",
-              icon: Icons.favorite,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => Favorite()),
-                );
-              },
-            ),
-            _buildDrawerItem(
-              context,
-              title: "Contact Us",
-              icon: Icons.phone_android_outlined,
-              onTap: () async {
-                try {
-                  var response = await _crud.postRequest(linkCreateChat, {
-                    "user_id": sharedPref.getString("id").toString(),
-                  });
 
-                  if (response['status'] == "success" &&
-                      response.containsKey('chat_id')) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (context) => ChatScreen(
-                              chatId: int.parse(response['chat_id'].toString()),
-                              userId: int.parse(sharedPref.getString("id")!),
+            // Menu Items
+            Expanded(
+              child: ListView(
+                children: [
+                  _buildDrawerItem(
+                    context,
+                    title: "الصفحه الرئيسية", // "Home Page" in Arabic
+                    icon: Icons.home,
+                    onTap: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => HomeOwner()),
+                      );
+                    },
+                  ),
+                  const Divider(color: Colors.white54, height: 10),
+                  _buildDrawerItem(
+                    context,
+                    title: "حساب", // "Account" in Arabic
+                    icon: Icons.account_circle,
+                    onTap: () {
+                      if (sharedPref.getString("type").toString() == "owner") {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => OwnerRealstate(),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  const Divider(color: Colors.white54, height: 10),
+                  _buildDrawerItem(
+                    context,
+                    title: "الطلبات", // "Orders" in Arabic
+                    icon: Icons.list_alt,
+                    onTap: () {},
+                  ),
+                  const Divider(color: Colors.white54, height: 10),
+                  _buildDrawerItem(
+                    context,
+                    title: "المفضلة", // "Favorites" in Arabic
+                    icon: Icons.favorite,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => Favorite()),
+                      );
+                    },
+                  ),
+                  const Divider(color: Colors.white54, height: 10),
+                  _buildDrawerItem(
+                    context,
+                    title: "تواصل معنا", // "Contact Us" in Arabic
+                    icon: Icons.contact_support,
+                    onTap: () async {
+                      try {
+                        var response = await Crud().postRequest(
+                          linkCreateChat,
+                          {"user_id": sharedPref.getString("id").toString()},
+                        );
+
+                        if (response['status'] == "success" &&
+                            response.containsKey('chat_id')) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => ChatScreen(
+                                    chatId: int.parse(
+                                      response['chat_id'].toString(),
+                                    ),
+                                    userId: int.parse(
+                                      sharedPref.getString("id")!,
+                                    ),
+                                  ),
                             ),
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          response['message'] ?? "فشل إنشاء المحادثة",
-                        ),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("حدث خطأ: ${e.toString()}")),
-                  );
-                }
-              },
-            ),
-            _buildDrawerItem(
-              context,
-              title: "Sign Out",
-              icon: Icons.exit_to_app,
-              onTap: () {
-                sharedPref.clear();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => LoginScreen()),
-                );
-              },
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                response['message'] ?? "فشل إنشاء المحادثة",
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("حدث خطأ: ${e.toString()}")),
+                        );
+                      }
+                    },
+                  ),
+                  SizedBox(height: 270),
+                  _buildDrawerItem(
+                    context,
+                    title: "تسجيل الخروج", // "Sign Out" in Arabic
+                    icon: Icons.logout,
+                    onTap: () {
+                      sharedPref.clear();
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => LoginScreen()),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -444,21 +549,13 @@ class _CustomDrawer extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return ListTile(
+      contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
       title: Text(
         title,
-        style: const TextStyle(
-          fontSize: 16,
-          color: Colors.white, // Neutral dark text for better readability
-        ),
+        style: TextStyle(fontSize: 18, color: Colors.teal.shade50),
       ),
-      leading: Icon(
-        icon,
-        color: Colors.white, // Softer orange for icons
-        size: 24,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10), // Rounded edges for items
-      ),
+      leading: Icon(icon, color: Colors.teal.shade50, size: 26),
+      minLeadingWidth: 30,
       onTap: onTap,
     );
   }

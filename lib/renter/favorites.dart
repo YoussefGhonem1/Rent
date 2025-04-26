@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:rento/admin/approve_screen.dart';
 import 'package:rento/chat/chat_screen.dart';
+import 'package:rento/componants/card.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
 import '../admin/control_admin.dart';
@@ -15,13 +17,17 @@ class Favorite extends StatefulWidget {
   @override
   State<Favorite> createState() => _FavoriteState();
 }
+
 //with Crud
-class _FavoriteState extends State<Favorite>  {
+class _FavoriteState extends State<Favorite> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final Crud _crud = Crud();
   List<int> favoriteProperties = [];
   List<dynamic> filteredProperties = [];
+  TextEditingController searchController = TextEditingController();
+  List allProperties = [];
 
+  bool _showTitle = true;
   void loadFavorites() async {
     var response = await _crud.postRequest(linkGetFav, {
       "user_id": sharedPref.getString("id").toString(),
@@ -29,13 +35,13 @@ class _FavoriteState extends State<Favorite>  {
 
     if (response["status"] == "success") {
       setState(() {
-        favoriteProperties =
-            List<int>.from(response["favorites"].map((id) => id));
+        favoriteProperties = List<int>.from(
+          response["favorites"].map((id) => id),
+        );
       });
     }
   }
 
-  
   Future<void> loadallFavorites() async {
     var response = await _crud.postRequest(linkGetAllFav, {
       "user_id": sharedPref.getString("id").toString(),
@@ -43,9 +49,37 @@ class _FavoriteState extends State<Favorite>  {
 
     if (response["status"] == "success") {
       setState(() {
+        allProperties = response['data'];
+        filteredProperties = List.from(
+          allProperties,
+        ); // نسخ البيانات إلى filteredProperties
         filteredProperties = response["data"];
       });
     }
+  }
+
+  void filterSearch(String query) {
+    if (allProperties.isEmpty) {
+      print("🔴 No properties available to filter!");
+      return;
+    }
+    setState(() {
+      filteredProperties =
+          allProperties.where((property) {
+            print("🔍 Checking property: ${property['address']}"); // Debugging
+
+            bool matchesSearch =
+                query.isEmpty ||
+                (property['address'] != null &&
+                    property['address'].toString().toLowerCase().contains(
+                      query.toLowerCase(),
+                    ));
+
+            return matchesSearch;
+          }).toList();
+    });
+
+    print("✅ Found ${filteredProperties.length} matching properties.");
   }
 
   @override
@@ -61,151 +95,179 @@ class _FavoriteState extends State<Favorite>  {
       key: _scaffoldKey,
       drawer: _CustomDrawer(),
       appBar: AppBar(
-          
-          leading: IconButton(
-          icon: Icon(Icons.menu , color: Colors.white),
+        leading: IconButton(
+          icon: Icon(Icons.menu, color: Colors.teal[50]),
           onPressed: () {
             _scaffoldKey.currentState!.openDrawer(); // كده تفتحه بسهولة
           },
         ),
-        title: Text("Favorite Properties" ,  style: TextStyle(
+        title: Row(
+          children: [
+            Text(
+              "Rent",
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
-                color: Colors.white,
-              ),),
-        backgroundColor: Color.fromARGB(157, 42, 202, 181),
+                color: Colors.teal[50],
+              ),
+            ),
+            SizedBox(width: 100),
+            Expanded(
+              child: TextField(
+                controller: searchController,
+                decoration: InputDecoration(
+                  hintText: "ابحث عن عقار",
+                  hintStyle: TextStyle(color: Colors.white70),
+                  prefixIcon: Icon(Icons.search, color: Colors.white70),
+                  border: InputBorder.none,
+                ),
+                style: TextStyle(color: Colors.white),
+                onChanged: filterSearch,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.teal[800],
       ),
       body: Padding(
         padding: const EdgeInsets.all(10),
-        child: filteredProperties.isEmpty
-            ? Center(child: Text("No favorite properties yet."))
-            : GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.75,
-                ),
-                itemCount: filteredProperties.length,
-                itemBuilder: (context, index) {
-                  var property = filteredProperties[index];
-                  return InkWell(
-                    onTap: () async {
-                      await Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => RealEstateDetailsPage(
-                            fav: true,
-                            favoriteProperties: favoriteProperties,
-                            images: List<String>.from(property['photos']),
-                            videos: List<String>.from(property['videos']),
-                            id: '${property['id']}',
-                                owner_id: '${property['id']}',
-
-                            title: '${property['address']}',
-                            price: '${property['rent_amount']}',
-                            location: '${property['address']}',
-                            description: '${property['description']}',
-                            phone: '${property['phone']}',
-                            state: '${property['property_state']}',
-                            latitude:'${property['latitude']}' ,
-                            longitude: '${property['longitude']}',
-                            rating: 0.0,
+        child:
+            filteredProperties.isEmpty
+                ? Center(
+                  child: Text(
+                    "لا توجد عقارات مفضله",
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.teal[800],
+                    ),
+                  ),
+                )
+                : Column(
+                  children: [
+                    AnimatedContainer(
+                      duration: Duration(milliseconds: 300),
+                      height: _showTitle ? 50 : 0,
+                      child: Center(
+                        child: Text(
+                          "العقارات المفضله",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[900],
                           ),
                         ),
-                      ).then((value) {
-                        if (value == true) {
-                          setState(() {}); // إعادة بناء الصفحة لتحديث القائمة
-                        }
-                      });
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(15),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 10,
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ClipRRect(
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(15),
-                              topRight: Radius.circular(15),
-                            ),
-                            child: Image.network(
-                              "$linkImageRoot/${property['photos'][0]}",
-                              height: 100,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${property['address']}',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  '${property['rent_amount']}',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Color.fromARGB(157, 42, 202, 181),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.location_on,
-                                        size: 14, color: Colors.grey),
-                                    const SizedBox(width: 3),
-                                    Expanded(
-                                      child: Text(
-                                        '${property['address']}',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
                       ),
                     ),
-                  );
-                },
-              ),
+
+                    Expanded(
+                      child: NotificationListener<ScrollNotification>(
+                        onNotification: (notification) {
+                          if (notification is ScrollUpdateNotification) {
+                            setState(() {
+                              _showTitle = notification.metrics.pixels < 50;
+                            });
+                          }
+                          return true;
+                        },
+                        child: GridView.builder(
+                          shrinkWrap: true,
+                          physics:
+                              AlwaysScrollableScrollPhysics(), // تمكين التمرير
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 10,
+                                mainAxisSpacing: 10,
+                                childAspectRatio: 0.69,
+                              ),
+                          itemCount:
+                              filteredProperties
+                                  .length, // استخدام filteredProperties
+                          itemBuilder: (context, index) {
+                            var property =
+                                filteredProperties[index]; // استخدام filteredProperties
+                            return InkWell(
+                              onTap: () async {
+                                await Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => RealEstateDetailsPage(
+                                          fav: true,
+                                          favoriteProperties:
+                                              favoriteProperties,
+                                          images: List<String>.from(
+                                            property['photos'],
+                                          ),
+                                          videos: List<String>.from(
+                                            property['videos'],
+                                          ),
+                                          id: '${property['id']}',
+                                          owner_id: '${property['id']}',
+
+                                          title: '${property['address']}',
+                                          price: '${property['rent_amount']}',
+                                          location: '${property['address']}',
+                                          description:
+                                              '${property['description']}',
+                                          phone: '${property['phone']}',
+                                          state:
+                                              '${property['property_state']}',
+                                          latitude: '${property['latitude']}',
+                                          longitude: '${property['longitude']}',
+                                          floor_number:   '${property['floor_number']}',
+                                          room_count:  '${property['room_count']}',
+                                          property_direction:  '${property['property_direction']}',
+                                          rating: '${property['rate']}',
+                                        ),
+                                  ),
+                                ).then((value) {
+                                  if (value == true) {
+                                    setState(
+                                      () {},
+                                    ); // إعادة بناء الصفحة لتحديث القائمة
+                                  }
+                                });
+                              },
+                              child: RealEstateCard(
+                                image:
+                                    "$linkImageRoot/${property['photos'][0]}",
+                                title: '${property['address']}',
+                                price: '${property['rent_amount']}',
+                                location: '${property['address']}',
+                                description: '${property['description']}',
+                                rate: '${property['rate']}',
+                                status: '${property['property_state']}',
+                                isFavorite: favoriteProperties.contains(
+                                  property['id'],
+                                ), // ✅ تحديد إذا كان العقار في المفضل
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
       ),
     );
   }
 }
+
 Crud _crud = Crud();
+
 class _CustomDrawer extends StatelessWidget {
   const _CustomDrawer();
 
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      backgroundColor: Color.fromARGB(157, 42, 202, 181).withOpacity(0.5),
+      backgroundColor: Colors.teal[700], // Changed to solid teal color
       child: Container(
-        padding: const EdgeInsets.all(15),
-        child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // User Profile Section
             Row(
@@ -215,142 +277,149 @@ class _CustomDrawer extends StatelessWidget {
                   height: 70,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.white.withOpacity(0.5),
-                        blurRadius: 10,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
+                    color: Colors.white.withOpacity(0.2),
+                    border: Border.all(color: Colors.white, width: 0.3),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(70),
-                    child: Image.asset(
-                      "images/IMG_6965.PNG", // Add profile image
-                      fit: BoxFit.cover,
-                    ),
+                    borderRadius: BorderRadius.circular(35),
+                    child: Image.asset("images/Capture.PNG", fit: BoxFit.cover),
                   ),
                 ),
                 const SizedBox(width: 15),
-                Expanded(
-                  child: ListTile(
-                    title: Text(
-                      sharedPref.getString("username").toString(),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                        color: Colors.white, // Slightly darker text
-                      ),
-                    ),
+                Text(
+                  sharedPref.getString("username").toString(),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: Colors.teal.shade50,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            // Menu Items
-            _buildDrawerItem(
-              context,
-              title: "Home Page",
-              icon: Icons.home,
-              onTap: () {
-                Navigator.pushReplacement(context,
-                    MaterialPageRoute(builder: (context) => HomeOwner()));
-              },
-            ),
 
-            sharedPref.getString("type").toString() == "admin"
-                ? _buildDrawerItem(
+            // Menu Items
+            Expanded(
+              child: ListView(
+                children: [
+                  _buildDrawerItem(
                     context,
-                    title: "Control",
-                    icon: Icons.account_balance_rounded,
+                    title: "الصفحه الرئيسية", // "Home Page" in Arabic
+                    icon: Icons.home,
                     onTap: () {
-                      Navigator.push(
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => HomeOwner()),
+                      );
+                    },
+                  ),
+                  const Divider(color: Colors.white54, height: 10),
+                  _buildDrawerItem(
+                    context,
+                    title: "حساب", // "Account" in Arabic
+                    icon: Icons.account_circle,
+                    onTap: () {
+                      if (sharedPref.getString("type").toString() == "owner") {
+                        Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => ControlAdmin()));
+                            builder: (context) => OwnerRealstate(),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  const Divider(color: Colors.white54, height: 10),
+                  _buildDrawerItem(
+                    context,
+                    title: "الطلبات", // "Orders" in Arabic
+                    icon: Icons.list_alt,
+                    onTap: () {},
+                  ),
+                  const Divider(color: Colors.white54, height: 10),
+                  _buildDrawerItem(
+                    context,
+                    title: "المفضلة", // "Favorites" in Arabic
+                    icon: Icons.favorite,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => Favorite()),
+                      );
+                    },
+                  ),
+                  const Divider(color: Colors.white54, height: 10),
+                     (sharedPref.getString("type").toString() == "admin") ?
+                            _buildDrawerItem(
+                    context,
+                    title: "طلبات التاكيد", // "Favorites" in Arabic
+                    icon: Icons.approval,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => Approve()),
+                      );
                     },
                   )
-                : sharedPref.getString("type").toString() == "owner"
-                    ? _buildDrawerItem(
-                        context,
-                        title: "Acount",
-                        icon: Icons.account_balance_rounded,
-                        onTap: () {
+                     : SizedBox(),
+                  const Divider(color: Colors.white54, height: 10),
+                  _buildDrawerItem(
+                    context,
+                    title: "تواصل معنا", // "Contact Us" in Arabic
+                    icon: Icons.contact_support,
+                    onTap: () async {
+                      try {
+                        var response = await Crud().postRequest(
+                          linkCreateChat,
+                          {"user_id": sharedPref.getString("id").toString()},
+                        );
+
+                        if (response['status'] == "success" &&
+                            response.containsKey('chat_id')) {
                           Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => OwnerRealstate()));
-                        },
-                      )
-                    : _buildDrawerItem(
-                        context,
-                        title: "Account",
-                        icon: Icons.account_balance_rounded,
-                        onTap: () {},
-                      ),
-
-            _buildDrawerItem(
-              context,
-              title: "Order",
-              icon: Icons.check_box,
-              onTap: () {},
-            ),
-            _buildDrawerItem(
-              context,
-              title: "Favourites",
-              icon: Icons.favorite,
-              onTap: () {
-                Navigator.pushReplacement(context,
-                    MaterialPageRoute(builder: (context) => Favorite()));
-              },
-            ),
-            _buildDrawerItem(
-              context,
-              title: "Contact Us",
-              icon: Icons.phone_android_outlined,
-              onTap: () async {
-                try {
-                  var response = await _crud.postRequest(linkCreateChat, {
-                    "user_id": sharedPref.getString("id").toString(),
-                  });
-
-                  if (response['status'] == "success" &&
-                      response.containsKey('chat_id')) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (context) => ChatScreen(
-                              chatId: int.parse(response['chat_id'].toString()),
-                              userId: int.parse(sharedPref.getString("id")!),
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => ChatScreen(
+                                    chatId: int.parse(
+                                      response['chat_id'].toString(),
+                                    ),
+                                    userId: int.parse(
+                                      sharedPref.getString("id")!,
+                                    ),
+                                  ),
                             ),
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          response['message'] ?? "فشل إنشاء المحادثة",
-                        ),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("حدث خطأ: ${e.toString()}")),
-                  );
-                }
-              },
-            ),
-            _buildDrawerItem(
-              context,
-              title: "Sign Out",
-              icon: Icons.exit_to_app,
-              onTap: () {
-                sharedPref.clear();
-                Navigator.pushReplacement(context,
-                    MaterialPageRoute(builder: (context) => LoginScreen()));
-              },
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                response['message'] ?? "فشل إنشاء المحادثة",
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("حدث خطأ: ${e.toString()}")),
+                        );
+                      }
+                    },
+                  ),
+                  SizedBox(height: 270),
+                  _buildDrawerItem(
+                    context,
+                    title: "تسجيل الخروج", // "Sign Out" in Arabic
+                    icon: Icons.logout,
+                    onTap: () {
+                      sharedPref.clear();
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => LoginScreen()),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -365,21 +434,13 @@ class _CustomDrawer extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return ListTile(
+      contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
       title: Text(
         title,
-        style: const TextStyle(
-          fontSize: 18,
-          color: Colors.white, // Neutral dark text for better readability
-        ),
+        style: TextStyle(fontSize: 18, color: Colors.teal.shade50),
       ),
-      leading: Icon(
-        icon,
-        color: Colors.white, // Softer orange for icons
-        size: 26,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10), // Rounded edges for items
-      ),
+      leading: Icon(icon, color: Colors.teal.shade50, size: 26),
+      minLeadingWidth: 30,
       onTap: onTap,
     );
   }

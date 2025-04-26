@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rento/admin/approve_screen.dart';
 import 'package:rento/chatadmin/AdminChatList.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
@@ -90,12 +91,13 @@ class _ControlAdminState extends State<ControlAdmin> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.teal[50],
       key: _scaffoldKey,
       drawer: _CustomDrawer(),
       appBar: AppBar(
-        backgroundColor: Color.fromARGB(157, 42, 202, 181),
+        backgroundColor:Colors.teal[800],
           leading: IconButton(
-          icon: Icon(Icons.menu , color: Colors.white),
+          icon: Icon(Icons.menu , color: Colors.teal[50]),
           onPressed: () {
             _scaffoldKey.currentState!.openDrawer(); // كده تفتحه بسهولة
           },
@@ -107,7 +109,7 @@ class _ControlAdminState extends State<ControlAdmin> {
                style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
-                color: Colors.white,
+                color:Colors.teal[50],
               ),
             ),
             SizedBox(width: 100),
@@ -186,205 +188,212 @@ class _ControlAdminState extends State<ControlAdmin> {
                                         state: '${property['property_state']}',
                                         latitude: '${property['latitude']}',
                                         longitude: '${property['longitude']}',
-                                        rating: 0.0,
+                                         floor_number:   '${property['floor_number']}',
+                                          room_count:  '${property['room_count']}',
+                                          property_direction:  '${property['property_direction']}',
+                                        rating:'${property['rate']}',
                                       ),
                                 ),
                               );
                               loadFavorites();
                             },
-                            child: Container(
+                            child:  Container(
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: Colors.teal[100],
                                 borderRadius: BorderRadius.circular(15),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 10,
+                                    color: Colors.black.withOpacity(0.3),
+                                    blurRadius: 6,
+                                    offset: const Offset(1, 1),
                                   ),
                                 ],
+                                border: Border.all(
+                                  // إضافة الحدود هنا
+                                  color: Colors.teal.shade400,
+                                  width: 1,
+                                ),
                               ),
-                            
-                                child: Padding(
-                                   padding: EdgeInsets.symmetric(horizontal: 5 ,vertical: 3),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      // Property Image
-                                      ClipRRect(
-                                        borderRadius: const BorderRadius.only(
-                                          topLeft: Radius.circular(15),
-                                          topRight: Radius.circular(15),
-                                        ),
-                                        child: Image.network(
-                                          "$linkImageRoot/${property['photos'][0]}",
-                                          height: 100,
-                                          width: double.infinity,
-                                          fit: BoxFit.cover,
-                                        ),
+
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 3,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Property Image
+                                    ClipRRect(
+                                      borderRadius: const BorderRadius.only(
+                                        topLeft: Radius.circular(15),
+                                        topRight: Radius.circular(15),
                                       ),
-                                      const SizedBox(height: 5),
-                                  
-                                      // Property Details
-                                      Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              '${property['address']}',
-                                              style: const TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
+                                      child: Image.network(
+                                        "$linkImageRoot/${property['photos'][0]}",
+                                        height: 110,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 5),
+
+                                    // Property Details
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        right: 10,
+                                        left: 3,
+                                        top: 5,
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.location_on,
+                                                color: Colors.teal[900],
+                                                size: 24,
                                               ),
-                                            ),
-                                            const SizedBox(height: 3),
-                                            Text(
-                                              '${property['rent_amount']}',
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: Color.fromARGB(
-                                                  157,
-                                                  42,
-                                                  202,
-                                                  181,
+                                              Text(
+                                                '${property['address']}',
+                                                style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.teal[900],
                                                 ),
-                                                fontWeight: FontWeight.bold,
                                               ),
-                                            ),
-                                            const SizedBox(height: 3),
-                                            Row(
-                                              children: [
-                                                const Icon(
-                                                  Icons.location_on,
-                                                  size: 14,
-                                                  color: Colors.grey,
+                                            ],
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.attach_money,
+                                                color: Colors.teal[900],
+                                                size: 20,
+                                              ),
+                                              // السعر
+                                              Text(
+                                                " ${'${property['rent_amount']}'} L.E",
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.teal[900],
                                                 ),
-                                                const SizedBox(width: 3),
-                                                Expanded(
-                                                  child: Text(
-                                                    '${property['address']}',
-                                                    style: const TextStyle(
-                                                      fontSize: 12,
-                                                      color: Colors.grey,
-                                                    ),
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 3),
+                                        ],
+                                      ),
+                                    ),
+
+                                    // Edit and Delete Buttons
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 0,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Flexible(
+                                            child: ElevatedButton.icon(
+                                              onPressed: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder:
+                                                        (context) =>
+                                                            EditRealEstatePage(
+                                                              realdata:
+                                                                  property,
+                                                            ),
                                                   ),
+                                                );
+                                              },
+                                              icon: const Icon(
+                                                Icons.mode_edit_outlined,
+                                                size: 18,
+                                                color: Colors.white,
+                                              ),
+                                              label: const Text(
+                                                'تعديل',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 15,
                                                 ),
-                                              ],
+                                              ),
+                                              style: ElevatedButton.styleFrom(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 8,
+                                                    ),
+                                                backgroundColor:
+                                                    Colors.teal[800],
+                                                textStyle: const TextStyle(
+                                                  fontSize: 12,
+                                                ),
+                                              ),
                                             ),
-                                          ],
-                                        ),
-                                      ),
-                                  
-                                      // Edit and Delete Buttons
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Flexible(
-                                              child: ElevatedButton.icon(
-                                                onPressed: () {
-                                                  Navigator.push(
+                                          ),
+                                          const SizedBox(width: 2),
+                                          Flexible(
+                                            child: ElevatedButton.icon(
+                                              onPressed: () async {
+                                                var response = await _crud
+                                                    .postRequest(linkDelete, {
+                                                      "id":
+                                                          property['id']
+                                                              .toString(),
+                                                    });
+                                                if (response['status'] ==
+                                                    "success") {
+                                                  Navigator.pushReplacement(
                                                     context,
                                                     MaterialPageRoute(
                                                       builder:
                                                           (context) =>
-                                                              EditRealEstatePage(
-                                                                realdata:
-                                                                    property,
-                                                              ),
+                                                              ControlAdmin(),
                                                     ),
                                                   );
-                                                },
-                                                icon: const Icon(
-                                                  Icons.edit,
-                                                  size: 16,
+                                                }
+                                              },
+                                              icon: const Icon(
+                                                Icons.delete,
+                                                size: 18,
+                                                color: Colors.white,
+                                              ),
+                                              label: const Text(
+                                                'حذف',
+                                                style: TextStyle(
                                                   color: Colors.white,
+                                                  fontSize: 15
                                                 ),
-                                                label: const Text(
-                                                  'Edit',
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                                style: ElevatedButton.styleFrom(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 8,
-                                                      ),
-                                                  backgroundColor: Color.fromARGB(
-                                                    157,
-                                                    42,
-                                                    202,
-                                                    181,
-                                                  ),
-                                                  textStyle: const TextStyle(
-                                                    fontSize: 12,
-                                                  ),
+                                              ),
+                                              style: ElevatedButton.styleFrom(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 8,
+                                                    ),
+                                                backgroundColor:
+                                                    Colors.red.shade400,
+                                                textStyle: const TextStyle(
+                                                  fontSize: 12,
                                                 ),
                                               ),
                                             ),
-                                            const SizedBox(width: 2),
-                                            Flexible(
-                                              child: ElevatedButton.icon(
-                                                onPressed: () async {
-                                                  var response = await _crud
-                                                      .postRequest(linkDelete, {
-                                                        "id":
-                                                            property['id']
-                                                                .toString(),
-                                                      });
-                                                  if (response['status'] ==
-                                                      "success") {
-                                                    Navigator.pushReplacement(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder:
-                                                            (context) =>
-                                                                ControlAdmin(),
-                                                      ),
-                                                    );
-                                                  }
-                                                },
-                                                icon: const Icon(
-                                                  Icons.delete,
-                                                  size: 14,
-                                                  color: Colors.white,
-                                                ),
-                                                label: const Text(
-                                                  'Delete',
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                                style: ElevatedButton.styleFrom(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 8,
-                                                      ),
-                                                  backgroundColor:
-                                                      Colors.red.shade400,
-                                                  textStyle: const TextStyle(
-                                                    fontSize: 12,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                              
+                              ),
                             ),
                           );
                         },
@@ -400,12 +409,17 @@ class _ControlAdminState extends State<ControlAdmin> {
             MaterialPageRoute(builder: (context) => AddRealEstatePage()),
           );
         },
-        backgroundColor: Color.fromARGB(157, 42, 202, 181),
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: Colors.teal[800],
+          child: Text("اضافه" ,  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.teal[50],),)
       ),
     );
   }
 }
+
+
+
+
+Crud _crud = Crud();
 
 class _CustomDrawer extends StatelessWidget {
   const _CustomDrawer();
@@ -413,10 +427,11 @@ class _CustomDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      backgroundColor: Color.fromARGB(157, 42, 202, 181).withOpacity(0.5),
+      backgroundColor: Colors.teal[900], // Changed to solid teal color
       child: Container(
-        padding: const EdgeInsets.all(15),
-        child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // User Profile Section
             Row(
@@ -426,93 +441,113 @@ class _CustomDrawer extends StatelessWidget {
                   height: 70,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.white.withOpacity(0.5),
-                        blurRadius: 10,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
+                    color: Colors.white.withOpacity(0.2),
+                    border: Border.all(color: Colors.white, width: 0.3),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(70),
-                    child: Image.asset(
-                      "images/IMG_6965.PNG", // Add profile image
-                      fit: BoxFit.cover,
-                    ),
+                    borderRadius: BorderRadius.circular(35),
+                    child: Image.asset("images/Capture.PNG", fit: BoxFit.cover),
                   ),
                 ),
                 const SizedBox(width: 15),
-                Expanded(
-                  child: ListTile(
-                    title: Text(
-                      sharedPref.getString("username").toString(),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                        color: Colors.white, // Slightly darker text
-                      ),
-                    ),
+                Text(
+                  sharedPref.getString("username").toString(),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color:  Colors.teal.shade50,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+
             // Menu Items
-            _buildDrawerItem(
-              context,
-              title: "Home Page",
-              icon: Icons.home,
-              onTap: () {
-                Navigator.pushReplacement(
+            Expanded(
+              child: ListView(
+                children: [
+                  _buildDrawerItem(
+                    context,
+                    title: "الصفحه الرئيسية", // "Home Page" in Arabic
+                    icon: Icons.home,
+                    onTap: () {
+                       Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => HomeAdmin()),
                 );
-              },
-            ),
-            _buildDrawerItem(
-              context,
-              title: "Control",
-              icon: Icons.account_balance_rounded,
-              onTap: () {},
-            ),
-            _buildDrawerItem(
-              context,
-              title: "Order",
-              icon: Icons.check_box,
-              onTap: () {},
-            ),
-            _buildDrawerItem(
-              context,
-              title: "Favourites",
-              icon: Icons.favorite,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => Favorite()),
-                );
-              },
-            ),
-            _buildDrawerItem(
-              context,
-              title: "Contact Us",
-              icon: Icons.phone_android_outlined,
-               onTap: () {
-                  Navigator.push(context,
+                    },
+                  ),
+                  const Divider(color: Colors.white54, height: 10),
+                  _buildDrawerItem(
+                    context,
+                    title: "حساب", // "Account" in Arabic
+                    icon: Icons.account_circle,
+                    onTap: () {
+                     
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ControlAdmin(),
+                          ),
+                        );
+                      
+                    },
+                  ),
+                  const Divider(color: Colors.white54, height: 10),
+                  _buildDrawerItem(
+                    context,
+                    title: "الطلبات", // "Orders" in Arabic
+                    icon: Icons.list_alt,
+                    onTap: () {},
+                  ),
+                  const Divider(color: Colors.white54, height: 10),
+                  _buildDrawerItem(
+                    context,
+                    title: "المفضلة", // "Favorites" in Arabic
+                    icon: Icons.favorite,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => Favorite()),
+                      );
+                    },
+                  ),
+                  const Divider(color: Colors.white54, height: 10),
+                      _buildDrawerItem(
+                    context,
+                    title: "طلبات التاكيد", // "Favorites" in Arabic
+                    icon: Icons.approval,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => Approve()),
+                      );
+                    },
+                  ),
+                  const Divider(color: Colors.white54, height: 10),
+                  _buildDrawerItem(
+                    context,
+                    title: "تواصل معنا", // "Contact Us" in Arabic
+                    icon: Icons.contact_support,
+                    onTap: () {
+                   Navigator.push(context,
                     MaterialPageRoute(builder: (context) => AdminChatList()));
               },
-            ),
-            _buildDrawerItem(
-              context,
-              title: "Sign Out",
-              icon: Icons.exit_to_app,
-              onTap: () {
-                sharedPref.clear();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => LoginScreen()),
-                );
-              },
+                  ),
+                  SizedBox(height: 200),
+                  _buildDrawerItem(
+                    context,
+                    title: "تسجيل الخروج", // "Sign Out" in Arabic
+                    icon: Icons.logout,
+                    onTap: () {
+                      sharedPref.clear();
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => LoginScreen()),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -527,22 +562,15 @@ class _CustomDrawer extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return ListTile(
+      contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
       title: Text(
         title,
-        style: const TextStyle(
-          fontSize: 18,
-          color: Colors.white, // Neutral dark text for better readability
-        ),
+        style:  TextStyle(fontSize: 18, color:  Colors.teal.shade50),
       ),
-      leading: Icon(
-        icon,
-        color: Colors.white, // Softer orange for icons
-        size: 26,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10), // Rounded edges for items
-      ),
+      leading: Icon(icon, color:  Colors.teal.shade50, size: 26),
+      minLeadingWidth: 30,
       onTap: onTap,
     );
   }
 }
+

@@ -49,7 +49,7 @@ class _AdminChatListState extends State<AdminChatList> {
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back,
-            color: Colors.white,
+            color: Colors.teal[50],
           ), // أو أيقونة تانية تعجبك
           onPressed: () {
             Navigator.pop(context); // الرجوع للصفحة السابقة
@@ -60,10 +60,10 @@ class _AdminChatListState extends State<AdminChatList> {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 20,
-            color: Colors.white,
+            color: Colors.teal[50],
           ),
         ),
-        backgroundColor: Color.fromARGB(157, 42, 202, 181),
+        backgroundColor: Colors.teal[800],
       ),
       body:
           _isLoading
@@ -76,51 +76,109 @@ class _AdminChatListState extends State<AdminChatList> {
   }
 
   Widget _buildChatItem(Chat chat) {
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: Color.fromARGB(157, 42, 202, 181),
-        child: Text(chat.userName[0], style: TextStyle(color: Colors.black)),
-      ),
-      title: Row(
-        children: [
-          Expanded(child: Text(chat.userName)),
-          if (chat.unreadCount > 0)
-            Container(
-              padding: EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                chat.unreadCount.toString(),
-                style: TextStyle(color: Colors.white, fontSize: 12),
-              ),
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.teal[100], // لون الخلفية
+          borderRadius: BorderRadius.circular(10), // زوايا مدورة
+          boxShadow: [
+            BoxShadow(
+              color: Colors.teal.withOpacity(0.3),
+              spreadRadius: 2,
+              blurRadius: 5,
+              offset: Offset(1, 1), // ظل خفيف
             ),
-        ],
-      ),
-      subtitle: Text(
-        chat.lastMessage ?? '',
-        style: TextStyle(
-          fontWeight:
-              chat.unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+          ],
+        ),
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor:
+                chat.unreadCount > 0 ? Colors.red : Colors.teal[800],
+            child:
+                chat.unreadCount > 0
+                    ? Text(
+                      chat.unreadCount.toString(),
+                      style: TextStyle(color: Colors.teal[50], fontSize: 15),
+                    )
+                    : Text(
+                      chat.userName[0],
+                      style: TextStyle(color: Colors.teal[50], fontSize: 15),
+                    ),
+          ),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  chat.userName,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: Colors.teal[900],
+                  ),
+                ),
+              ),
+              
+              Padding(
+                padding: EdgeInsets.only(left: 70),
+                child: Flexible(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                       var response = await _crud.postRequest(linkDeleteChat, {
+                        "id": chat.id.toString(),
+                      });
+                      if (response['status'] == "success") {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => AdminChatList()),
+                        );
+                      } 
+                    },
+                    icon: const Icon(Icons.delete, size: 14, color: Colors.white),
+                    label: const Text(
+                      'حذف',
+                      style: TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
+                      backgroundColor: Colors.red.shade400,
+                      textStyle: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          subtitle: Text(
+            chat.lastMessage ?? '',
+            style: TextStyle(
+              fontWeight:
+                  chat.unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          trailing: Text(DateFormat('HH:mm').format(chat.lastMessageAt)),
+          onTap: () async {
+            final updatedChat = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AdminChatScreen(chat: chat),
+              ),
+            );
+
+            if (updatedChat != null) {
+              setState(() {
+                final index = _chats.indexWhere((c) => c.id == updatedChat.id);
+                if (index != -1) {
+                  _chats[index] = updatedChat;
+                }
+              });
+            }
+          },
         ),
       ),
-      trailing: Text(DateFormat('HH:mm').format(chat.lastMessageAt)),
-      onTap: () async {
-        final updatedChat = await Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => AdminChatScreen(chat: chat)),
-        );
-
-        if (updatedChat != null) {
-          setState(() {
-            final index = _chats.indexWhere((c) => c.id == updatedChat.id);
-            if (index != -1) {
-              _chats[index] = updatedChat;
-            }
-          });
-        }
-      },
     );
   }
 }

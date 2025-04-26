@@ -1,5 +1,5 @@
-/*    const String linkServerName = "http://192.168.36.1/rent";   */
-  const String linkServerName = "http://10.0.2.2/rent";   
+   const String linkServerName = "http://192.168.233.1/rent";  
+ /*  const String linkServerName = "http://10.0.2.2/rent";    */
 /*  const String linkServerName = "https://youssef.wuaze.com";  */
  /*  const String linkServerName = "http://localhost:3000";  */
 
@@ -17,6 +17,8 @@ const String linkEdit = "$linkServerName/realstates/edit.php";
 const String linkDelete = "$linkServerName/realstates/delete.php";
 const String linkViewOwnerRealstates = "$linkServerName/realstates/viewOwnerRealstates.php";
 const String linkDeleteImage = "$linkServerName/realstates/delete_photos.php";
+const String linkGetNotApprove = "$linkServerName/realstates/get_not_approved.php";
+const String linkApprove = "$linkServerName/realstates/approve.php";
 //favorites
 const String linkAddFav = "$linkServerName/favorites/add_fav.php";
 const String linkDelFav = "$linkServerName/favorites/del_fav.php";
@@ -36,7 +38,13 @@ const String linkCreateChat = "$linkServerName/chat/create_chat.php";
 const String linkSendMessage = "$linkServerName/chat/send_message.php";
 const String linkGetMessage = "$linkServerName/chat/get_messages.php";
 const String linkGetAdminChats = "$linkServerName/chat/get_admin_chats.php";
-const String linkMarkAsRead    = "$linkServerName/chat/mark_as_read.php";
+const String linkMarkAsRead  = "$linkServerName/chat/mark_as_read.php";
+const String linkDeleteChat = "$linkServerName/chat/delete_chat.php";
+//orders
+const String linkAdminOrder = "$linkServerName/orders/admin_orders.php";
+const String linkOwnerOrder = "$linkServerName/orders/owner_orders.php";
+const String linkRenterOrder = "$linkServerName/orders/renter_orders.php";
+ 
 
 
 

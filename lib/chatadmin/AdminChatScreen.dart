@@ -171,7 +171,7 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
           ),
           padding: EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: isMe ? Color.fromARGB(157, 42, 202, 181) : Colors.grey[200],
+            color: isMe ? Colors.teal[800] : Colors.teal[50],
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -180,15 +180,17 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
               Text(
                 message.content,
                 style: TextStyle(
-                  color: isMe ? Colors.white : Colors.black,
+                     fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  color: isMe ? Colors.teal[50] : Colors.teal[800],
                 ),
               ),
               SizedBox(height: 4),
               Text(
                 DateFormat('HH:mm').format(message.timestamp),
                 style: TextStyle(
-                  color: isMe ? Colors.white70 : Colors.black54,
-                  fontSize: 10,
+                  color: isMe ? Colors.teal[50] : Colors.teal[800],
+                  fontSize: 12,
                 ),
               ),
             ],
@@ -234,7 +236,7 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
       child: Scaffold(
         appBar: AppBar(
             leading: IconButton(
-    icon: Icon(Icons.arrow_back , color: Colors.white), // أو أيقونة تانية تعجبك
+    icon: Icon(Icons.arrow_back , color: Colors.teal[50]), // أو أيقونة تانية تعجبك
     onPressed: () {
       Navigator.pop(context); // الرجوع للصفحة السابقة
     },
@@ -242,12 +244,12 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
           title: Text(widget.chat.userName  , style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
-                color: Colors.white,
+                color: Colors.teal[50],
               ), ),
-          backgroundColor:Color.fromARGB(157, 37, 184, 164),
+          backgroundColor:Colors.teal[800],
           actions: [
             IconButton(
-              icon: Icon(Icons.info , color: Colors.white,),
+              icon: Icon(Icons.info , color: Colors.teal[50],),
               onPressed: _showUserInfo,
             ),
           ],
