@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:rento/chat/chat_screen.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
+import 'package:rento/owner/owner_orders_screen.dart';
 import 'package:rento/renter/details.dart';
+import 'package:rento/renter/renter_orders_screen.dart';
 import '../auth/login.dart';
 import '../crud.dart';
 import '../renter/favorites.dart';
@@ -111,7 +113,7 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
-                color:  Colors.teal[50],
+                color: Colors.teal[50],
               ),
             ),
             SizedBox(width: 100),
@@ -190,10 +192,12 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
                                         state: '${property['property_state']}',
                                         latitude: '${property['latitude']}',
                                         longitude: '${property['longitude']}',
-                                         floor_number:   '${property['floor_number']}',
-                                          room_count:  '${property['room_count']}',
-                                          property_direction:  '${property['property_direction']}',
-                                        rating:'${property['rate']}',
+                                        floor_number:
+                                            '${property['floor_number']}',
+                                        room_count: '${property['room_count']}',
+                                        property_direction:
+                                            '${property['property_direction']}',
+                                        rating: '${property['rate']}',
                                       ),
                                 ),
                               );
@@ -373,7 +377,7 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
                                                 'حذف',
                                                 style: TextStyle(
                                                   color: Colors.white,
-                                                  fontSize: 15
+                                                  fontSize: 15,
                                                 ),
                                               ),
                                               style: ElevatedButton.styleFrom(
@@ -411,8 +415,15 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
             MaterialPageRoute(builder: (context) => AddRealEstatePage()),
           );
         },
-        backgroundColor:  Colors.teal[800],
-         child: Text("اضافه" ,  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.teal[50],),)
+        backgroundColor: Colors.teal[800],
+        child: Text(
+          "اضافه",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            color: Colors.teal[50],
+          ),
+        ),
       ),
     );
   }
@@ -496,7 +507,25 @@ class _CustomDrawer extends StatelessWidget {
                     context,
                     title: "الطلبات", // "Orders" in Arabic
                     icon: Icons.list_alt,
-                    onTap: () {},
+                    onTap: () {
+                    
+                        if (sharedPref.getString("type").toString() ==
+                            "owner") {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => OwnerOrdersScreen(),
+                            ),
+                          );
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => RenterOrdersScreen(),
+                            ),
+                          );
+                      };
+                    },
                   ),
                   const Divider(color: Colors.white54, height: 10),
                   _buildDrawerItem(

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:rento/admin/approve_screen.dart';
+import 'package:rento/admin/order_admin_screen.dart';
 import 'package:rento/chat/chat_screen.dart';
 import 'package:rento/componants/card.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
+import 'package:rento/owner/owner_orders_screen.dart';
+import 'package:rento/renter/renter_orders_screen.dart';
 import '../admin/control_admin.dart';
 import '../auth/login.dart';
 import '../crud.dart';
@@ -216,9 +219,12 @@ class _FavoriteState extends State<Favorite> {
                                               '${property['property_state']}',
                                           latitude: '${property['latitude']}',
                                           longitude: '${property['longitude']}',
-                                          floor_number:   '${property['floor_number']}',
-                                          room_count:  '${property['room_count']}',
-                                          property_direction:  '${property['property_direction']}',
+                                          floor_number:
+                                              '${property['floor_number']}',
+                                          room_count:
+                                              '${property['room_count']}',
+                                          property_direction:
+                                              '${property['property_direction']}',
                                           rating: '${property['rate']}',
                                         ),
                                   ),
@@ -263,7 +269,7 @@ class _CustomDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      backgroundColor: Colors.teal[700], // Changed to solid teal color
+      backgroundColor: Colors.teal[900], // Changed to solid teal color
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
         child: Column(
@@ -333,7 +339,35 @@ class _CustomDrawer extends StatelessWidget {
                     context,
                     title: "الطلبات", // "Orders" in Arabic
                     icon: Icons.list_alt,
-                    onTap: () {},
+                    onTap: () {
+                      
+                      
+                        if (sharedPref.getString("type").toString() ==
+                            "admin") {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => OrderAdminScreen(),
+                            ),
+                          );
+                        } else if (sharedPref.getString("type").toString() ==
+                            "owner") {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => OwnerOrdersScreen(),
+                            ),
+                          );
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => RenterOrdersScreen(),
+                            ),
+                          );
+                        }
+                      },
+                    
                   ),
                   const Divider(color: Colors.white54, height: 10),
                   _buildDrawerItem(
@@ -347,20 +381,23 @@ class _CustomDrawer extends StatelessWidget {
                       );
                     },
                   ),
-                  const Divider(color: Colors.white54, height: 10),
-                     (sharedPref.getString("type").toString() == "admin") ?
-                            _buildDrawerItem(
-                    context,
-                    title: "طلبات التاكيد", // "Favorites" in Arabic
-                    icon: Icons.approval,
-                    onTap: () {
-                      Navigator.push(
+                  (sharedPref.getString("type").toString() == "admin")
+                      ? const Divider(color: Colors.white54, height: 10)
+                      : Spacer(),
+
+                  (sharedPref.getString("type").toString() == "admin")
+                      ? _buildDrawerItem(
                         context,
-                        MaterialPageRoute(builder: (context) => Approve()),
-                      );
-                    },
-                  )
-                     : SizedBox(),
+                        title: "طلبات التاكيد", // "Favorites" in Arabic
+                        icon: Icons.approval,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => Approve()),
+                          );
+                        },
+                      )
+                      : SizedBox(),
                   const Divider(color: Colors.white54, height: 10),
                   _buildDrawerItem(
                     context,
@@ -405,7 +442,9 @@ class _CustomDrawer extends StatelessWidget {
                       }
                     },
                   ),
-                  SizedBox(height: 270),
+                  (sharedPref.getString("type").toString() == "admin")
+                      ? SizedBox(height: 200)
+                      : SizedBox(height: 270),
                   _buildDrawerItem(
                     context,
                     title: "تسجيل الخروج", // "Sign Out" in Arabic

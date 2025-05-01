@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rento/admin/approve_screen.dart';
+import 'package:rento/admin/order_admin_screen.dart';
 import 'package:rento/chatadmin/AdminChatList.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
@@ -483,7 +484,7 @@ class _CustomDrawer extends StatelessWidget {
                     icon: Icons.account_circle,
                     onTap: () {
                      
-                        Navigator.push(
+                        Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
                             builder: (context) => ControlAdmin(),
@@ -497,7 +498,12 @@ class _CustomDrawer extends StatelessWidget {
                     context,
                     title: "الطلبات", // "Orders" in Arabic
                     icon: Icons.list_alt,
-                    onTap: () {},
+                    onTap: () {
+                            Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => OrderAdminScreen()),
+                      );
+                    },
                   ),
                   const Divider(color: Colors.white54, height: 10),
                   _buildDrawerItem(
@@ -505,7 +511,7 @@ class _CustomDrawer extends StatelessWidget {
                     title: "المفضلة", // "Favorites" in Arabic
                     icon: Icons.favorite,
                     onTap: () {
-                      Navigator.push(
+                      Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(builder: (context) => Favorite()),
                       );
@@ -517,7 +523,7 @@ class _CustomDrawer extends StatelessWidget {
                     title: "طلبات التاكيد", // "Favorites" in Arabic
                     icon: Icons.approval,
                     onTap: () {
-                      Navigator.push(
+                      Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(builder: (context) => Approve()),
                       );
@@ -529,7 +535,7 @@ class _CustomDrawer extends StatelessWidget {
                     title: "تواصل معنا", // "Contact Us" in Arabic
                     icon: Icons.contact_support,
                     onTap: () {
-                   Navigator.push(context,
+                   Navigator.pushReplacement(context,
                     MaterialPageRoute(builder: (context) => AdminChatList()));
               },
                   ),

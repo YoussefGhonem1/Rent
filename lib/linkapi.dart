@@ -44,6 +44,10 @@ const String linkDeleteChat = "$linkServerName/chat/delete_chat.php";
 const String linkAdminOrder = "$linkServerName/orders/admin_orders.php";
 const String linkOwnerOrder = "$linkServerName/orders/owner_orders.php";
 const String linkRenterOrder = "$linkServerName/orders/renter_orders.php";
+const String linkDeleteOrder = "$linkServerName/orders/delete_order.php";
+
+
+
  
 
 
