@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
-import '../auth/login.dart';
 import '../crud.dart';
-import '../owner/add_prop.dart';
 import '../renter/details.dart';
 
 class OwnerOrdersScreen extends StatefulWidget {
@@ -52,6 +50,20 @@ class _OwnerOrdersScreenState extends State<OwnerOrdersScreen> {
     final firstImage =
         images.isNotEmpty ? "$linkImageRoot/${images[0]}" : "images/fig.webp";
 
+    // Extract reservation details
+    final int numberOfPeople = transaction['number_of_people'] ?? 0;
+    final String reservationType = transaction['reservation_type'] ?? 'N/A';
+    final String startDate = transaction['start_date'] ?? '';
+    final String endDate = transaction['end_date'] ?? '';
+    final double dailyPrice =
+        double.tryParse(property['rent_amount'] ?? '0') ?? 0;
+
+    // Calculate number of days and total price
+    final DateTime start = DateTime.parse(startDate);
+    final DateTime end = DateTime.parse(endDate);
+    final int numberOfDays = end.difference(start).inDays;
+    final double totalPrice = numberOfDays * dailyPrice;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
@@ -98,7 +110,7 @@ class _OwnerOrdersScreenState extends State<OwnerOrdersScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // الصورة
+            // Image
             Padding(
               padding: const EdgeInsets.only(right: 5, left: 5, top: 5),
               child: SizedBox(
@@ -122,97 +134,208 @@ class _OwnerOrdersScreenState extends State<OwnerOrdersScreen> {
               ),
             ),
 
-            // التفاصيل
-            Padding(
-              padding: const EdgeInsets.only(right: 10, left: 3, top: 5),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // العنوان
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on,
-                        color: Colors.teal[900],
-                        size: 24,
-                      ),
-                      Expanded(
-                        child: Text(
-                          property['address'] ?? 'No Address',
+            // Details
+            Directionality(
+              textDirection: TextDirection.rtl,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 10, left: 3, top: 5),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // Address
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          color: Colors.teal[900],
+                          size: 24,
+                        ),
+                        Expanded(
+                          child: Text(
+                            property['address'] ?? 'No Address',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.teal[900],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+
+                    // Price
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.attach_money,
+                          color: Colors.teal[900],
+                          size: 20,
+                        ),
+                        Text(
+                          " ${property['rent_amount']} L.E / day",
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.teal[900],
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
 
-                  const SizedBox(height: 5),
+                    // Reservation Details
+                    _buildInfoRow("عدد الأشخاص:", "$numberOfPeople"),
+                    _buildInfoRow("نوع الحجز:", reservationType),
+                    _buildInfoRow("تاريخ البدء:", startDate),
+                    _buildInfoRow("تاريخ الانتهاء:", endDate),
+                    _buildInfoRow("عدد الأيام:", "$numberOfDays"),
+                    _buildInfoRow(
+                      "التكلفة الإجمالية:",
+                      "${totalPrice.toStringAsFixed(2)} L.E",
+                    ),
 
-                  // السعر
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.attach_money,
-                        color: Colors.teal[900],
-                        size: 20,
-                      ),
-                      Text(
-                        " ${property['rent_amount']} L.E",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.teal[900],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
+                    const SizedBox(height: 3),
 
-                  // تاريخ الحجز وحالة الدفع
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // تاريخ الحجز
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            color: Colors.teal[900],
-                            size: 16,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Payment Status Chip
+                        Flexible(
+                          child: Chip(
+                            label: Text(
+                              _getPaymentStatusText(transaction['payment_status']),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.white,
+                              ),
+                            ),
+                            backgroundColor: _getPaymentStatusColor(
+                              transaction['payment_status'],
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            "${transaction['start_date']}",
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.teal[900],
+                        ),
+                transaction['status'] == 'pending' ?
+                        // Elevated Button
+                        Flexible(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              foregroundColor: Colors.teal[50],
+                              backgroundColor: Colors.teal[900],
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8,
+                                horizontal:
+                                    15, // Adjusted padding to prevent overflow
+                              ),
+                            ),
+                            onPressed: () async {
+                              // عرض مربع الحوار
+                              final confirmed = await showDialog<bool>(
+                                context: context,
+                                barrierDismissible:
+                                    false, // لمنع الإغلاق بالضغط خارج الصندوق
+                                builder:
+                                    (ctx) => AlertDialog(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      backgroundColor: Colors.teal[50],
+                                      title: Text(
+                                        'تأكيد',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Colors.teal[900],
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      content: Text(
+                                        'هل انت متاكد من الموفقه على العرض؟',
+                                        style: TextStyle(
+                                          color: Colors.teal[900],
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      actionsAlignment:
+                                          MainAxisAlignment.center,
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.of(ctx).pop(false);
+                                          },
+                                          child: Text(
+                                            'الغاء الحجز',
+                                            style: TextStyle(
+                                              color: Colors.teal[900],
+                                            ),
+                                          ),
+                                        ),
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.teal[800],
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                          onPressed: () {
+                                            Navigator.of(ctx).pop(true);
+                                          },
+                                          child: Text(
+                                            'تاكيد الحجز',
+                                            style: TextStyle(
+                                              color: Colors.teal[50],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                              );
+
+                              if (confirmed == true) {
+                                var response = await _crud.postRequest(
+                                  linkUpdateOrderStatus,
+                                  {'id': transaction['id'].toString()},
+                                );
+                              } else if (confirmed == false) {
+                                await _crud.postRequest(linkDeleteOrder, {
+                                  'id': transaction['id'].toString(),
+                                });
+                              }
+                               getReservations();
+                            },
+                            child: const Text(
+                              "موافقه على العرض",
+                              style: TextStyle(
+                                fontSize: 16,
+                              ), // Adjusted font size to fit
                             ),
                           ),
-                        ],
-                      ),
-
-                      // حالة الدفع
-                      Chip(
-                        label: Text(
-                          _getStatusText(transaction['payment_status']),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.white,
+                        )
+                        :  Flexible(
+                          child: Chip(
+                            label: Text(
+                              _getStatusText(transaction['status']),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.white,
+                              ),
+                            ),
+                            backgroundColor: _getStatusColor(
+                              transaction['status'],
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
                           ),
                         ),
-                        backgroundColor: _getStatusColor(
-                          transaction['payment_status'],
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -224,15 +347,37 @@ class _OwnerOrdersScreenState extends State<OwnerOrdersScreen> {
   String _getStatusText(String? status) {
     switch (status) {
       case 'pending':
-        return 'في انتظار الدفع';
-      case 'paid':
-        return 'تم الدفع';
+        return 'بانتظار التاكيد';
+      case 'confirmed':
+        return 'تم التاكيد';
       default:
-        return 'N/A';
+        return 'غير ماكد';
     }
   }
 
   Color _getStatusColor(String? status) {
+    switch (status) {
+      case 'pending':
+        return Colors.orange;
+      case 'confirmed':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+   String _getPaymentStatusText(String? status) {
+    switch (status) {
+      case 'pending':
+        return 'بانتظار الدفع';
+      case 'paid':
+        return 'تم الدفع';
+      default:
+        return 'غير مدفوع';
+    }
+  }
+
+  Color _getPaymentStatusColor(String? status) {
     switch (status) {
       case 'pending':
         return Colors.orange;
@@ -242,6 +387,8 @@ class _OwnerOrdersScreenState extends State<OwnerOrdersScreen> {
         return Colors.grey;
     }
   }
+
+ 
 
   Widget _buildInfoRow(String title, String value) {
     return Padding(

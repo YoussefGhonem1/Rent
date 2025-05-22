@@ -7,7 +7,6 @@ import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
 import 'package:rento/owner/owner_orders_screen.dart';
 import 'package:rento/renter/renter_orders_screen.dart';
-import '../admin/control_admin.dart';
 import '../auth/login.dart';
 import '../crud.dart';
 import '../owner/home_owner.dart';

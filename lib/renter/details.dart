@@ -64,10 +64,10 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
   String userBookingMessage = "";
   List<Map<String, dynamic>> userBookings = [];
   late ValueNotifier<String> stateNotifier;
-  late List<VideoPlayerController> _videoControllers;
-  late List<bool> _videoStatus; // Track whether video is playing or paused
   List<int> favoriteList = [];
   final Crud _crud = Crud();
+  String finalgroupType = "";
+  String finalnumberOfPeople = "";
 
   bool isOwnerOrAdmin(String userId, String propertyOwnerId) {
     // Check if the user is the owner of the property or an admin
@@ -89,25 +89,6 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
 
     fetchPropertyState(); // جلب حالة العقار من الخادم
     checkUserBooking(); // جلب حجوزات المستخدم
-
-    _videoControllers =
-        widget.videos.map((videoUrl) {
-          print("$linkVideoRoot/$videoUrl");
-          final controller = VideoPlayerController.network(
-              "$linkVideoRoot/$videoUrl",
-            )
-            ..initialize()
-                .then((_) {
-                  if (mounted) {
-                    setState(() {});
-                  }
-                })
-                .catchError((error) {
-                  print('Error initializing video: $error');
-                });
-          return controller;
-        }).toList();
-    _videoStatus = List.generate(widget.videos.length, (index) => false);
   }
 
   @override
@@ -481,26 +462,10 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
               style: ElevatedButton.styleFrom(backgroundColor: Colors.teal[50]),
               onPressed: () async {
                 String userId = sharedPref.getString("id").toString();
-                String propertyOwnerId =
-                    widget.owner_id; // Replace with actual owner ID
+                String propertyOwnerId = widget.owner_id;
 
-                if (isOwnerOrAdmin(userId, propertyOwnerId)) {
-                  // Allow booking without payment for owner or admin
-                  await bookProperty(widget.id, startDate, endDate);
-                } else {
-                  // Show payment options for regular users
-                  Navigator.pop(context); // Close the booking dialog
-                  showDialog(
-                    context: context,
-                    builder:
-                        (context) => _showPaymentOptionsDialog(
-                          widget.id,
-                          startDate,
-                          endDate,
-                          totalPrice,
-                        ),
-                  );
-                }
+                Navigator.pop(context);
+                await bookProperty(widget.id, startDate, endDate);
               },
               child: Text(
                 "تاكيد",
@@ -517,7 +482,6 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
     );
   }
 
-  //  دالة مساعدة لإنشاء زر تحديد التاريخ بتصميم متناسق
   Widget _buildDatePickerButton(
     BuildContext context, {
     required String label,
@@ -581,17 +545,19 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
         'property_id': propertyId,
         'start_date': start.toIso8601String().split('T')[0],
         'end_date': end.toIso8601String().split('T')[0],
+        'numberOfPeople' : finalnumberOfPeople , 
+        'groupType': finalgroupType== 'family' ?   'عائلة'  :  'اصدقاء'
       });
 
       if (response['status'] == "success") {
-        stateNotifier.value = "booked"; // تحديث حالة العق ر
+/*         stateNotifier.value = "booked"; // تحديث حالة العق ر */
         await checkUserBooking(); // تحديث قائمة الحجوزات
 
         // عرض رسالة نجاح الحجز
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              "✅ تم الحجز من ${start.toIso8601String().split('T')[0]} إلى ${end.toIso8601String().split('T')[0]}",
+              "تم الارسال الى صاحب العقار",
             ),
           ),
         );
@@ -614,162 +580,155 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
     }
   }
 
-  Future<void> initiatePaymobPayment(double amount) async {
-    try {
-      // 1️⃣ الحصول على `auth_token`
-      var tokenResponse = await http.post(
-        Uri.parse("https://accept.paymob.com/api/auth/tokens"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"api_key": paymobApiKey}),
-      );
+  Widget _showPeopleAndTypeDialog() {
+    int numberOfPeople = 1;
+    String groupType = "family";
 
-      var tokenData = jsonDecode(tokenResponse.body);
-      String token = tokenData['token'];
-
-      // 2️⃣ إنشاء الطلب `order_id`
-      var orderResponse = await http.post(
-        Uri.parse("https://accept.paymob.com/api/ecommerce/orders"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "auth_token": token,
-          "delivery_needed": false,
-          "amount_cents": (amount * 100).toInt().toString(),
-          "currency": "EGP",
-          "items": [],
-        }),
-      );
-
-      var orderData = jsonDecode(orderResponse.body);
-      String orderId = orderData['id'].toString();
-
-      // 3️⃣ إنشاء `payment_key`
-      var paymentKeyResponse = await http.post(
-        Uri.parse("https://accept.paymob.com/api/acceptance/payment_keys"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "auth_token": token,
-          "amount_cents": (amount * 100).toInt().toString(),
-          "expiration": 3600,
-          "order_id": orderId,
-          "currency": "EGP",
-          "integration_id": paymobIntegrationId,
-          "billing_data": {
-            "first_name": "Test",
-            "last_name": "User",
-            "email": "test@example.com",
-            "phone_number": "01000000000",
-            "apartment": "NA",
-            "floor": "NA",
-            "street": "NA",
-            "building": "NA",
-            "shipping_method": "NA",
-            "postal_code": "NA",
-            "city": "Cairo",
-            "state": "Cairo",
-            "country": "EG",
-          },
-        }),
-      );
-
-      var paymentKeyData = jsonDecode(paymentKeyResponse.body);
-      String paymentToken = paymentKeyData['token'];
-
-      // 4️⃣ فتح رابط الدفع في المتصفح
-      String paymentUrl =
-          "https://accept.paymob.com/api/acceptance/iframes/903674?payment_token=$paymentToken";
-      launch(paymentUrl);
-    } catch (e) {
-      print("❌ خطأ أثناء الدفع: $e");
-    }
-  }
-
-  Future<void> processPayment(PaymentMethod method, double totalAmount) async {
-    double depositPercentage =
-        method == PaymentMethod.cashOnDelivery ? 0.1 : 1.0;
-    double depositAmount = totalAmount * depositPercentage;
-
-    try {
-      if (method == PaymentMethod.online) {
-        await initiatePaymobPayment(depositAmount);
-      } else {
-        print("✅ الدفع عند الاستلام: تحويل $depositAmount L.E");
-      }
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("✅ تمت عملية الدفع بنجاح")));
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ فشلت عملية الدفع: ${e.toString()}")),
-      );
-    }
-  }
-
-  Widget _showPaymentOptionsDialog(
-    String propertyId,
-    DateTime start,
-    DateTime end,
-    double totalPrice,
-  ) {
-    return AlertDialog(
-      backgroundColor: Colors.teal[900],
-      title: Center(
-        child: Text(
-          "اختر طريقة الدفع",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-            color: Colors.teal[50],
+    return StatefulBuilder(
+      builder: (context, setDialogState) {
+        return AlertDialog(
+          backgroundColor: Colors.teal[900],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
           ),
-        ),
-      ),
-      content: Directionality(
-        textDirection: TextDirection.rtl,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: Text(
-                "الدفع الإلكتروني",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: Colors.teal[50],
-                ),
+          title: Center(
+            child: Text(
+              "حدد عدد الأشخاص والنوع",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.teal[50],
               ),
-              subtitle: Text(
-                "المبلغ الإجمالي: ${totalPrice.toStringAsFixed(2)} ج.م",
-                style: TextStyle(fontSize: 16, color: Colors.teal[50]),
-              ),
-              onTap: () async {
-                Navigator.pop(context);
-                await processPayment(PaymentMethod.online, totalPrice);
-                await bookProperty(propertyId, start, end);
-              },
             ),
-            const Divider(color: Colors.white54, height: 10),
-            ListTile(
-              title: Text(
-                "الدفع عند الاستلام",
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Number of People Selector
+              Directionality(
+                textDirection: TextDirection.rtl,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "عدد الأشخاص:",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal[50],
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.remove, color: Colors.teal[50]),
+                          onPressed: () {
+                            setDialogState(() {
+                              if (numberOfPeople > 1) numberOfPeople--;
+                            });
+                          },
+                        ),
+                        Text(
+                          "$numberOfPeople",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[50],
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.add, color: Colors.teal[50]),
+                          onPressed: () {
+                            setDialogState(() {
+                              numberOfPeople++;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Group Type Selector
+              Directionality(
+                textDirection: TextDirection.rtl,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "النوع:",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal[50],
+                      ),
+                    ),
+                    DropdownButton<String>(
+                      dropdownColor: Colors.teal[800],
+                      value: groupType,
+                      items: [
+                        DropdownMenuItem(
+                          value: "family",
+                          child: Text(
+                            "عائلة",
+                            style: TextStyle(color: Colors.teal[50]),
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: "friends",
+                          child: Text(
+                            "أصدقاء",
+                            style: TextStyle(color: Colors.teal[50]),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setDialogState(() {
+                          groupType = value!;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                "إلغاء",
                 style: TextStyle(
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  fontSize: 18,
                   color: Colors.teal[50],
                 ),
               ),
-              subtitle: Text(
-                "المبلغ المطلوب: ${(totalPrice * 0.1).toStringAsFixed(2)} ج.م",
-                  style: TextStyle( fontSize: 16, color: Colors.teal[50],),
-              ),
-              onTap: () async {
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.teal[50]),
+              onPressed: () {
+                finalgroupType = groupType;
+                finalnumberOfPeople = '$numberOfPeople';
                 Navigator.pop(context);
-                await processPayment(PaymentMethod.cashOnDelivery, totalPrice);
-                await bookProperty(propertyId, start, end);
+                showDialog(
+                  context: context,
+                  builder: (context) => _showBookingDialog(),
+                );
               },
+              child: Text(
+                "التالي",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.teal[900],
+                ),
+              ),
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -850,8 +809,9 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
                                                 child,
                                                 loadingProgress,
                                               ) {
-                                                if (loadingProgress == null)
+                                                if (loadingProgress == null) {
                                                   return child;
+                                                }
                                                 return Center(
                                                   child:
                                                       CircularProgressIndicator(),
@@ -895,8 +855,9 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
                                         child,
                                         loadingProgress,
                                       ) {
-                                        if (loadingProgress == null)
+                                        if (loadingProgress == null) {
                                           return child;
+                                        }
                                         return Center(
                                           child: CircularProgressIndicator(),
                                         );
@@ -1300,7 +1261,7 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
                       onPressed: () {
                         showDialog(
                           context: context,
-                          builder: (context) => _showBookingDialog(),
+                          builder: (context) => _showPeopleAndTypeDialog(),
                         );
                       },
                       child: const Text(

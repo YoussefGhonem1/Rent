@@ -1,4 +1,4 @@
-   const String linkServerName = "http://192.168.233.1/rent";  
+   const String linkServerName = "http://192.168.247.1/rent";  
  /*  const String linkServerName = "http://10.0.2.2/rent";    */
 /*  const String linkServerName = "https://youssef.wuaze.com";  */
  /*  const String linkServerName = "http://localhost:3000";  */
@@ -45,6 +45,9 @@ const String linkAdminOrder = "$linkServerName/orders/admin_orders.php";
 const String linkOwnerOrder = "$linkServerName/orders/owner_orders.php";
 const String linkRenterOrder = "$linkServerName/orders/renter_orders.php";
 const String linkDeleteOrder = "$linkServerName/orders/delete_order.php";
+const String linkUpdateOrderStatus = "$linkServerName/orders/update_status.php";
+//payment
+const String linkCheckPaymentStatus = "$linkServerName/payment/paymob_webhook.php";
 
 
 

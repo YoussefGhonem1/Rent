@@ -135,13 +135,13 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
     _phoneController.text = widget.realdata['phone'];
     _locationController.text = widget.realdata['address'];
     _rentAmountController.text = widget.realdata['rent_amount'];
-    selectedFloor = widget.realdata['floor_number']?.toString() ?? null;
+    selectedFloor = widget.realdata['floor_number']?.toString();
     selectedRooms =
         widget.realdata['room_count'] != null
             ? int.tryParse(widget.realdata['room_count'].toString())
             : null;
     selectedDirection =
-        widget.realdata['property_direction']?.toString() ?? null;
+        widget.realdata['property_direction']?.toString();
         
     super.initState();
   }
@@ -321,8 +321,9 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
                                 ),
                               ),
                               validator: (value) {
-                                if (value?.isEmpty ?? true)
+                                if (value?.isEmpty ?? true) {
                                   return "الرجاء إدخال الموقع";
+                                }
                                 return null;
                               },
                             ),
@@ -473,8 +474,9 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
                                 ),
                               ),
                               validator: (value) {
-                                if (value?.isEmpty ?? true)
+                                if (value?.isEmpty ?? true) {
                                   return "الرجاء إدخال الوصف";
+                                }
                                 return null;
                               },
                             ),
@@ -497,8 +499,9 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
                                 ),
                               ),
                               validator: (value) {
-                                if (value?.isEmpty ?? true)
+                                if (value?.isEmpty ?? true) {
                                   return "الرجاء إدخال رقم الهاتف";
+                                }
                                 return null;
                               },
                             ),
@@ -539,8 +542,9 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
                                 ),
                               ),
                               validator: (value) {
-                                if (value?.isEmpty ?? true)
+                                if (value?.isEmpty ?? true) {
                                   return "الرجاء إدخال التكلفة";
+                                }
                                 return null;
                               },
                             ),

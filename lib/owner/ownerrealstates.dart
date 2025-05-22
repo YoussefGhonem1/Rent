@@ -524,7 +524,7 @@ class _CustomDrawer extends StatelessWidget {
                               builder: (context) => RenterOrdersScreen(),
                             ),
                           );
-                      };
+                      }
                     },
                   ),
                   const Divider(color: Colors.white54, height: 10),

@@ -59,14 +59,17 @@ class _OrderAdminScreenState extends State<OrderAdminScreen> {
     setState(() {
       filteredOrders =
           allOrders.where((order) {
-            print("🔍 Checking property: ${order['property']['address']}"); // Debugging
+            print(
+              "🔍 Checking property: ${order['property']['address']}",
+            ); // Debugging
 
             bool matchesSearch =
                 query.isEmpty ||
                 (order['property']['address'] != null &&
-                   order['property']['address'].toString().toLowerCase().contains(
-                      query.toLowerCase(),
-                    ));
+                    order['property']['address']
+                        .toString()
+                        .toLowerCase()
+                        .contains(query.toLowerCase()));
 
             return matchesSearch;
           }).toList();
@@ -130,6 +133,37 @@ class _OrderAdminScreenState extends State<OrderAdminScreen> {
             const SizedBox(height: 8),
             _buildUserSection('المالك:', owner),
 
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                 Chip(
+                    label: Text(
+                      _getStatusText(transaction['status']),
+                      style: const TextStyle(fontSize: 14, color: Colors.white),
+                    ),
+                    backgroundColor: _getStatusColor(transaction['status']),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                
+                
+                  Text(
+                    'موافقه صاحب العقار',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.teal[900],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                
+              ],
+            ),
+
             // Status & Actions
             const SizedBox(height: 12),
             Row(
@@ -137,10 +171,11 @@ class _OrderAdminScreenState extends State<OrderAdminScreen> {
               children: [
                 Chip(
                   label: Text(
-                    transaction['payment_status'] ?? 'N/A',
+                    _getPaymentStatusText(transaction['payment_status']) ??
+                        'N/A',
                     style: const TextStyle(color: Colors.white),
                   ),
-                  backgroundColor: _getStatusColor(
+                  backgroundColor: _getPaymentStatusColor(
                     transaction['payment_status'],
                   ),
                 ),
@@ -164,7 +199,40 @@ class _OrderAdminScreenState extends State<OrderAdminScreen> {
     );
   }
 
+  String _getStatusText(String? status) {
+    switch (status) {
+      case 'pending':
+        return 'بانتظار التاكيد';
+      case 'confirmed':
+        return 'تم التاكيد';
+      default:
+        return 'غير ماكد';
+    }
+  }
+
   Color _getStatusColor(String? status) {
+    switch (status) {
+      case 'pending':
+        return Colors.orange;
+      case 'confirmed':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getPaymentStatusText(String? status) {
+    switch (status) {
+      case 'pending':
+        return 'في انتظار الدفع';
+      case 'paid':
+        return 'تم الدفع';
+      default:
+        return 'غير معروف';
+    }
+  }
+
+  Color _getPaymentStatusColor(String? status) {
     switch (status) {
       case 'pending':
         return Colors.orange;
@@ -299,7 +367,8 @@ class _OrderAdminScreenState extends State<OrderAdminScreen> {
                   padding: const EdgeInsets.only(bottom: 20),
                   itemCount: filteredOrders.length,
                   itemBuilder:
-                      (context, index) => _buildOrderCard(filteredOrders[index]),
+                      (context, index) =>
+                          _buildOrderCard(filteredOrders[index]),
                 ),
               ),
     );

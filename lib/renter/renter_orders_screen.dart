@@ -1,7 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
-import '../auth/login.dart';
+import 'package:rento/renter/payment.dart';
 import '../crud.dart';
 import '../renter/details.dart';
 
@@ -17,6 +19,7 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
   final Crud _crud = Crud();
   List allReservations = [];
   bool isLoading = true;
+  bool payment_status = false;
 
   Future<void> getReservations() async {
     try {
@@ -38,6 +41,8 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
     }
   }
 
+ 
+
   @override
   void initState() {
     super.initState();
@@ -48,7 +53,8 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
     final transaction = reservation['transaction'];
     final property = reservation['property'];
     final images = property['images'] ?? [];
-    final firstImage = images.isNotEmpty ? "$linkImageRoot/${images[0]}" : "images/fig.webp";
+    final firstImage =
+        images.isNotEmpty ? "$linkImageRoot/${images[0]}" : "images/fig.webp";
 
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
@@ -62,36 +68,34 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
             offset: const Offset(1, 1),
           ),
         ],
-        border: Border.all(
-          color: Colors.teal.shade400,
-          width: 1,
-        ),
+        border: Border.all(color: Colors.teal.shade400, width: 1),
       ),
       child: InkWell(
         onTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => RealEstateDetailsPage(
-                fav: false,
-                favoriteProperties: [],
-                images: List<String>.from(images),
-                videos: [],
-                id: property['id'].toString(),
-                owner_id: transaction['user_id'].toString(),
-                title: property['address'] ?? "",
-                price: property['rent_amount'] ?? "",
-                location: property['address'] ?? "",
-                description: "",
-                phone: "",
-                state: "",
-                latitude: "",
-                longitude: "",
-                floor_number: "",
-                room_count: "",
-                property_direction: property['property_direction'] ?? "",
-                rating: "",
-              ),
+              builder:
+                  (context) => RealEstateDetailsPage(
+                    fav: false,
+                    favoriteProperties: [],
+                    images: List<String>.from(images),
+                    videos: [],
+                    id: property['id'].toString(),
+                    owner_id: transaction['user_id'].toString(),
+                    title: property['address'] ?? "",
+                    price: property['rent_amount'] ?? "",
+                    location: property['address'] ?? "",
+                    description: "",
+                    phone: "",
+                    state: "",
+                    latitude: "",
+                    longitude: "",
+                    floor_number: "",
+                    room_count: "",
+                    property_direction: property['property_direction'] ?? "",
+                    rating: "",
+                  ),
             ),
           );
         },
@@ -107,26 +111,26 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                 height: 150,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Image.asset(
-                  "images/fig.webp",
-                  height: 150,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
+                errorBuilder:
+                    (context, error, stackTrace) => Image.asset(
+                      "images/fig.webp",
+                      height: 150,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
               ),
             ),
 
             // Reservation Status
             Container(
               height: 30,
-              color: transaction['status'] == 'confirmed'
-                  ? Colors.teal[800]
-                  : Colors.orange,
+              color:
+                  transaction['status'] == 'confirmed'
+                      ? Colors.teal[800]
+                      : Colors.orange,
               child: Center(
                 child: Text(
-                  transaction['status'] == 'confirmed'
-                      ? 'تم تأكيد الحجز'
-                      : 'في انتظار التأكيد',
+                  _getStatusText(transaction['status']),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -144,7 +148,11 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                   // Address
                   Row(
                     children: [
-                      Icon(Icons.location_on, color: Colors.teal[900], size: 20),
+                      Icon(
+                        Icons.location_on,
+                        color: Colors.teal[900],
+                        size: 20,
+                      ),
                       const SizedBox(width: 5),
                       Expanded(
                         child: Text(
@@ -166,7 +174,11 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.attach_money, color: Colors.teal[900], size: 18),
+                          Icon(
+                            Icons.attach_money,
+                            color: Colors.teal[900],
+                            size: 18,
+                          ),
                           Text(
                             " ${property['rent_amount']} L.E",
                             style: TextStyle(
@@ -179,7 +191,11 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                       ),
                       Row(
                         children: [
-                          Icon(Icons.calendar_today, color: Colors.teal[900], size: 16),
+                          Icon(
+                            Icons.calendar_today,
+                            color: Colors.teal[900],
+                            size: 16,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             "${transaction['start_date']}",
@@ -195,28 +211,90 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                   const SizedBox(height: 8),
 
                   // Payment Status
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'حالة الدفع:',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.teal[800],
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Chip(
-                        label: Text(
-                          _getPaymentStatusText(transaction['payment_status']),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.white,
+                  Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'حالة الدفع:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.teal[800],
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        backgroundColor: _getPaymentStatusColor(transaction['payment_status']),
+                        Chip(
+                          label: Text(
+                            _getPaymentStatusText(
+                              transaction['payment_status'],
+                            ),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.white,
+                            ),
+                          ),
+                          backgroundColor: _getPaymentStatusColor(
+                            transaction['payment_status'],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  Center(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.teal[50],
+                        backgroundColor: Colors.teal[900],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 50,
+                        ),
                       ),
-                    ],
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => PaymentPage(
+                                  amount: 250.0,
+                                     reservationId: transaction['id'].toString(),
+                                  onPaymentSuccess: () {
+                                    // نفذ الإجراء عند نجاح الدفع
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('تم الدفع بنجاح'),
+                                      ),
+                                    );
+                                    print(
+                                      "Payment success-----------------------",
+                                    );
+                                  },
+                                  onPaymentFailed: () {
+                                    // نفذ الإجراء عند فشل الدفع
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('فشل الدفع'),
+                                      ),
+                                    );
+                                    print(
+                                      "Payment failed-----------------------",
+                                    );
+                                  },
+                                ),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        "ادفع الان",
+                        style: TextStyle(fontSize: 20),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -225,6 +303,17 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
         ),
       ),
     );
+  }
+
+  String _getStatusText(String? status) {
+    switch (status) {
+      case 'pending':
+        return 'فى انتظار موافقه صاحب العقار';
+      case 'confirmed':
+        return 'تم موافقه صاحب العقار يمكنك الدفع';
+      default:
+        return 'غير معروف';
+    }
   }
 
   String _getPaymentStatusText(String? status) {
@@ -256,37 +345,39 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
       key: _scaffoldKey,
       appBar: AppBar(
         backgroundColor: Colors.teal[800],
-        title:  Text('حجوزاتي' ,   style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color:  Colors.teal[50],
-              ),),
+        title: Text(
+          'حجوزاتي',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: Colors.teal[50],
+          ),
+        ),
         leading: IconButton(
-          icon:  Icon(Icons.arrow_back, color: Colors.teal[50]),
+          icon: Icon(Icons.arrow_back, color: Colors.teal[50]),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : allReservations.isEmpty
+      body:
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : allReservations.isEmpty
               ? Center(
-                  child: Text(
-                    'لا توجد حجوزات حالية',
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: Colors.teal[800],
-                    ),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: getReservations,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(10),
-                    itemCount: allReservations.length,
-                    itemBuilder: (context, index) => 
-                      _buildReservationCard(allReservations[index]),
-                  ),
+                child: Text(
+                  'لا توجد حجوزات حالية',
+                  style: TextStyle(fontSize: 20, color: Colors.teal[800]),
                 ),
+              )
+              : RefreshIndicator(
+                onRefresh: getReservations,
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(10),
+                  itemCount: allReservations.length,
+                  itemBuilder:
+                      (context, index) =>
+                          _buildReservationCard(allReservations[index]),
+                ),
+              ),
     );
   }
 }

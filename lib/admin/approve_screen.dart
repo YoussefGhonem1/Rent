@@ -7,7 +7,6 @@ import 'package:rento/main.dart';
 import 'package:rento/renter/details.dart';
 import '../auth/login.dart';
 import '../crud.dart';
-import '../owner/add_prop.dart';
 import '../renter/favorites.dart';
 import 'home_admin.dart';
 
