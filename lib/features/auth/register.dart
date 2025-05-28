@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../crud.dart';
-import '../linkapi.dart';
-import '../valid.dart';
-import 'login.dart';
+import '../../crud.dart';
+import '../../linkapi.dart';
+import '../../valid.dart';
+import 'presentation/views/login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});

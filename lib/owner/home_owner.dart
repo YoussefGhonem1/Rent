@@ -4,7 +4,7 @@ import 'package:rento/main.dart';
 import 'package:rento/owner/owner_orders_screen.dart';
 import 'package:rento/renter/details.dart';
 import 'package:rento/renter/renter_orders_screen.dart';
-import '../auth/login.dart';
+import '../features/auth/presentation/views/login_screen.dart';
 import '../chat/chat_screen.dart';
 import '../componants/card.dart';
 import '../crud.dart';

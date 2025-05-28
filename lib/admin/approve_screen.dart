@@ -5,7 +5,7 @@ import 'package:rento/chatadmin/AdminChatList.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
 import 'package:rento/renter/details.dart';
-import '../auth/login.dart';
+import '../features/auth/presentation/views/login_screen.dart';
 import '../crud.dart';
 import '../renter/favorites.dart';
 import 'home_admin.dart';
