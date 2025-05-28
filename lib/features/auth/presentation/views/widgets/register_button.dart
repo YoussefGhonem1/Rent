@@ -1,7 +1,7 @@
 // lib/auth/presentation/views/widgets/register_button.dart
 
 import 'package:flutter/material.dart';
-import 'package:rento/features/auth/register.dart';
+import 'package:rento/features/auth/presentation/views/register.dart';
 
 class RegisterButton extends StatelessWidget {
   const RegisterButton({super.key});

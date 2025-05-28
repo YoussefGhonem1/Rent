@@ -8,7 +8,7 @@ class LoginInitial extends LoginState {}
 class LoginLoading extends LoginState {}
 
 class LoginSuccess extends LoginState {
-  final User user;
+  final LoginUserEntity user;
 
   LoginSuccess(this.user);
 }

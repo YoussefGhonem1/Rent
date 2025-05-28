@@ -1,17 +1,17 @@
 
 
-import 'package:rento/features/auth/domain/entites/user_entity.dart';
+import 'package:rento/features/auth/domain/entites/login_user_entity.dart';
 
-class UserModel extends User {
-  UserModel({
+class UserModelLogin extends LoginUserEntity {
+  UserModelLogin({
     required super.id,
     required super.username,
     required super.email,
     required super.type,
   });
 
-  factory UserModel.fromJson(Map<String, dynamic> json) {
-    return UserModel(
+  factory UserModelLogin.fromJson(Map<String, dynamic> json) {
+    return UserModelLogin(
       id: json['id'].toString(),
       username: json['username'],
       email: json['email'],

@@ -1,5 +1,7 @@
-import 'package:rento/features/auth/domain/entites/user_entity.dart';
+import 'package:rento/features/auth/domain/entites/login_user_entity.dart';
+import 'package:rento/features/auth/domain/entites/register_user_entity.dart';
 
 abstract class AuthRepository {
-  Future<User?> login(String email, String password);
+  Future<LoginUserEntity?> login(String email, String password);
+  Future<void> register(RegisterUserEntity user);
 }

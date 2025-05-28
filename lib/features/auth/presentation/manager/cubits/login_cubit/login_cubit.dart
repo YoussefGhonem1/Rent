@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:meta/meta.dart';
-import 'package:rento/features/auth/domain/entites/user_entity.dart';
+import 'package:rento/features/auth/domain/entites/login_user_entity.dart';
 import 'package:rento/features/auth/domain/use_cases/login_use_case.dart';
 
 part 'login_state.dart';
