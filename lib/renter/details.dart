@@ -1,8 +1,4 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import '../core/utils/functions/get_location.dart';
 import '../crud.dart';
 import '../linkapi.dart';
@@ -521,10 +517,8 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
               firstDate: minDate,
               lastDate: DateTime.now().add(Duration(days: 365)),
             );
-            if (picked != null) {
-              onDateSelected(picked);
-            }
-          },
+            onDateSelected(picked!);
+                    },
           child: Text(
             "${date.toLocal()}".split(' ')[0],
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),

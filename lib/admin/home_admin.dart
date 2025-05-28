@@ -5,7 +5,7 @@ import 'package:rento/admin/order_admin_screen.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
 import 'package:rento/renter/details.dart';
-import '../auth/login.dart';
+import '../features/auth/presentation/views/login_screen.dart';
 import '../chatadmin/AdminChatList.dart';
 import '../componants/card.dart';
 import '../crud.dart';
