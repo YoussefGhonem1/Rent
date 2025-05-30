@@ -1,32 +1,35 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+
+import 'package:rento/crud.dart';
+import 'package:rento/linkapi.dart';
+
 import '../models/user_model_login.dart';
+// تأكد من المسار الصحيح
 
-abstract class LoginRemoteDataSource {
-  Future<UserModelLogin?> login(String email, String password);
-}
+ 
+class LoginRemoteDataSource   {
+  final Crud crud;
 
-class AuthRemoteDataSourceImpl implements LoginRemoteDataSource {
-  final http.Client client;
-
-  AuthRemoteDataSourceImpl(this.client);
+  LoginRemoteDataSource(this.crud);
 
   @override
   Future<UserModelLogin?> login(String email, String password) async {
-    final response = await client.post(
-      Uri.parse('YOUR_API_ENDPOINT_HERE'),
-      body: {'email': email, 'password': password},
-    );
+    try {
+      final response = await crud.postRequest(
+        linkLogin,
+        {
+          'email': email,
+          'password': password,
+        },
+      );
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data['status'] == 'success') {
-        return UserModelLogin.fromJson(data['data']);
+      if (response != null && response['status'] == 'success') {
+        return UserModelLogin.fromJson(response['data']);
       } else {
         return null;
       }
-    } else {
-      throw Exception('Failed to login');
+    } catch (e) {
+      print('Login Exception: $e');
+      return null;
     }
   }
 }
