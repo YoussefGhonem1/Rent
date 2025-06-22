@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "203816041191",
+    "project_id": "makanak-c9d5f",
+    "storage_bucket": "makanak-c9d5f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:203816041191:android:c8052cd5ce3f7a17a98042",
+        "android_client_info": {
+          "package_name": "com.example.rento"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpQivPYw6RclXE_gPjOMbY38awYJe4DEo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

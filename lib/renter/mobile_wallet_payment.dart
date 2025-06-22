@@ -6,14 +6,14 @@ import 'package:rento/linkapi.dart'; // تأكد أن هذا المسار صحي
 import 'dart:convert';
 import 'package:webview_flutter/webview_flutter.dart'; 
 
-class PaymentPage extends StatefulWidget {
+class MobileWalletPaymentPage extends StatefulWidget {
   final double amount;
   final String reservationId; 
   final String propertyId;
   final VoidCallback onPaymentSuccess; 
   final VoidCallback onPaymentFailed;   
 
-  const PaymentPage({
+  const MobileWalletPaymentPage({
     super.key,
     required this.amount,
     required this.reservationId,   
@@ -23,14 +23,14 @@ class PaymentPage extends StatefulWidget {
   });
 
   @override
-  State<PaymentPage> createState() => _PaymentPageState();
+  State<MobileWalletPaymentPage> createState() => _PaymentPageState();
 }
 
-class _PaymentPageState extends State<PaymentPage> {
+class _PaymentPageState extends State<MobileWalletPaymentPage> {
   final String apiKey =
       "ZXlKaGJHY2lPaUpJVXpVeE1pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SmpiR0Z6Y3lJNklrMWxjbU5vWVc1MElpd2ljSEp2Wm1sc1pWOXdheUk2TVRBeU56UTNNaXdpYm1GdFpTSTZJakUzTlRBMU5EVTVPVEV1T1RNek5UQXlJbjAuaE9XN1JhbzVDb2NSZjZ6SkRfQ3BBM1B3STBpV0Y2dVRqcDI3Ym92NTFBTmZJTmdjX092WTBUV1ZTY1hLdlNHRm1QSGFaSzZpYVV6dVk0dEYxdER5YUE="; 
-  final String integrationId = "5001272"; 
-  final String iframeId = "903674"; 
+  final String integrationId = "5148358"; 
+  final String iframeId = "933499"; 
 
   final Crud _crud = Crud(); 
 
@@ -61,12 +61,17 @@ class _PaymentPageState extends State<PaymentPage> {
   
   Future<void> initiatePayment(double amount) async {
     try {
-     
+      print("DEBUG: Starting Paymob payment initiation for amount: $amount, Reservation ID: ${widget.reservationId}");
+
+      // ✅ الخطوة 0: التحقق مما إذا كان هناك Paymob order ID موجود بالفعل للحجز ده
       var checkOrderIdResponse = await _crud.postRequest(linkGetPaymobOrderId, {
         "reservation_id": widget.reservationId,
       });
 
-       // ✅ تعديل الشرط لجلب paymob_integration_id_usedForOrder أيضاً
+      print("DEBUG: Check Existing Paymob Order ID Status: ${checkOrderIdResponse['status']}");
+      print("DEBUG: Check Existing Paymob Order ID Message: ${checkOrderIdResponse['message']}");
+
+      // ✅ تعديل الشرط لجلب paymob_integration_id_usedForOrder أيضاً
       if (checkOrderIdResponse['status'] == "success" && 
           checkOrderIdResponse['paymob_order_id'] != null && 
           checkOrderIdResponse['paymob_integration_id_used'] != null) { // ✅ التأكد من وجود الـ integration_id_used

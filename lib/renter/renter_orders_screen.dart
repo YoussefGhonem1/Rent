@@ -1,11 +1,11 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
-import 'package:rento/renter/payment.dart';
+import 'package:rento/renter/payment.dart'; // تأكد من المسار الصحيح لـ PaymentPage
+import 'package:rento/renter/mobile_wallet_payment.dart'; // ✅ جديد: استيراد MobileWalletPaymentPage
 import '../crud.dart';
-import '../renter/details.dart';
+import '../renter/details.dart'; // تأكد من المسار الصحيح
 
 class RenterOrdersScreen extends StatefulWidget {
   const RenterOrdersScreen({super.key});
@@ -19,7 +19,7 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
   final Crud _crud = Crud();
   List allReservations = [];
   bool isLoading = true;
-  bool payment_status = false;
+  // removed: bool payment_status = false; // لم يعد مستخدماً
 
   Future<void> getReservations() async {
     try {
@@ -41,20 +41,156 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
     }
   }
 
- 
-
   @override
   void initState() {
     super.initState();
     getReservations();
   }
 
+  // دالة لحساب عدد الأيام (مكررة، ممكن تبقى دالة عامة)
+  int _calculateNumberOfDays(DateTime start, DateTime end) {
+    return end.difference(start).inDays ; // +1 لحساب اليوم الأخير
+  }
+
+  // ✅ دالة جديدة لعرض خيارات الدفع (كـ AlertDialog)
+  void _showPaymentOptions(BuildContext context, double amount, String reservationId, String propertyId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) { // استخدام dialogContext لتجنب الالتباس
+        return AlertDialog(
+          backgroundColor: Colors.teal[50],
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: Text(
+            "اختر طريقة الدفع",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              color: Colors.teal[900],
+            ),
+            textAlign: TextAlign.right,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min, // لجعل الـ Dialog لا يأخذ مساحة كبيرة
+            children: [
+              ListTile(
+                leading: Icon(Icons.credit_card, color: Colors.teal[800]),
+                title: Text(
+                  "بطاقة ائتمان(فيزا/ماستركارد)",
+                  style: TextStyle(color: Colors.teal[900], fontSize: 16),
+                ),
+                onTap: () {
+                  Navigator.pop(dialogContext); // إغلاق الـ Dialog
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PaymentPage( // توجيه لصفحة الدفع بالبطاقة
+                        amount: amount,
+                        reservationId: reservationId,
+                        propertyId: propertyId,
+                        onPaymentSuccess: () {
+                          // نفذ الإجراء عند نجاح الدفع (بعد عودة المستخدم)
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('تم الدفع ببطاقة بنجاح!'),
+                            ),
+                          );
+                          getReservations(); // تحديث قائمة الحجوزات
+                        },
+                        onPaymentFailed: () {
+                          // نفذ الإجراء عند فشل الدفع
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('فشل الدفع بالبطاقة.'),
+                            ),
+                          );
+                          getReservations(); // تحديث قائمة الحجوزات حتى لو فشل
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const Divider(color: Colors.teal, height: 10), // فاصل
+              ListTile(
+                leading: Icon(Icons.wallet, color: Colors.teal[800]),
+                title: Text(
+                  "المحفظة الإلكترونية",
+                  style: TextStyle(color: Colors.teal[900], fontSize: 16),
+                ),
+                onTap: () {
+                  Navigator.pop(dialogContext); // إغلاق الـ Dialog
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MobileWalletPaymentPage( // توجيه لصفحة الدفع بالمحفظة
+                        amount: amount,
+                        reservationId: reservationId,
+                        propertyId: propertyId,
+                        onPaymentSuccess: () {
+                          // نفذ الإجراء عند نجاح الدفع
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('تم الدفع بالمحفظة بنجاح!'),
+                            ),
+                          );
+                          getReservations(); // تحديث قائمة الحجوزات
+                        },
+                        onPaymentFailed: () {
+                          // نفذ الإجراء عند فشل الدفع
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('فشل الدفع بالمحفظة.'),
+                            ),
+                          );
+                          getReservations(); // تحديث قائمة الحجوزات حتى لو فشل
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext), // إغلاق الـ Dialog
+              child: Text(
+                "إلغاء",
+                style: TextStyle(color: Colors.teal[700]),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildReservationCard(Map<String, dynamic> reservation) {
     final transaction = reservation['transaction'];
     final property = reservation['property'];
-    final images = property['images'] ?? [];
+    final images = property['images'] ?? property['photos'] ?? []; // استخدام 'photos' لو 'images' غير موجودة
     final firstImage =
         images.isNotEmpty ? "$linkImageRoot/${images[0]}" : "images/fig.webp";
+
+    // حساب المبلغ الإجمالي
+    final String startDateStr = transaction['start_date'] ?? '';
+    final String endDateStr = transaction['end_date'] ?? '';
+    final double dailyPrice = double.tryParse(property['rent_amount'] ?? '0') ?? 0;
+
+    DateTime startDate;
+    DateTime endDate;
+    int numberOfDays = 0;
+    double totalPrice = 0.0;
+
+    try {
+      startDate = DateTime.parse(startDateStr);
+      endDate = DateTime.parse(endDateStr);
+      numberOfDays = _calculateNumberOfDays(startDate, endDate);
+      totalPrice = numberOfDays * dailyPrice; 
+    } catch (e) {
+      print("Error parsing dates or prices: $e");
+      // Handle error, e.g., set default values or show an error message
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
@@ -80,21 +216,21 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                     fav: false,
                     favoriteProperties: [],
                     images: List<String>.from(images),
-                    videos: [],
+                    videos: [], // Assuming no videos from this endpoint
                     id: property['id'].toString(),
-                    owner_id: transaction['user_id'].toString(),
+                    owner_id: transaction['owner_id'].toString(), // تأكد من الحصول على owner_id الصحيح
                     title: property['address'] ?? "",
                     price: property['rent_amount'] ?? "",
                     location: property['address'] ?? "",
-                    description: "",
-                    phone: "",
-                    state: "",
-                    latitude: "",
-                    longitude: "",
-                    floor_number: "",
-                    room_count: "",
+                    description: property['description'] ?? "",
+                    phone: property['phone'] ?? "",
+                    state: property['property_state'] ?? "",
+                    latitude: property['latitude'] ?? "",
+                    longitude: property['longitude'] ?? "",
+                    floor_number: property['floor_number'] ?? "",
+                    room_count: property['room_count'] ?? "",
                     property_direction: property['property_direction'] ?? "",
-                    rating: "",
+                    rating: property['rate'] ?? "",
                   ),
             ),
           );
@@ -210,7 +346,55 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Payment Status
+                  // End Date
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Icon(
+                        Icons.calendar_today,
+                        color: Colors.teal[900],
+                        size: 16,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        "${transaction['end_date']}",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.teal[900],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Total Price
+                  Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'التكلفة الإجمالية:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.teal[800],
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          '${totalPrice.toStringAsFixed(2)} L.E',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.teal[900],
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Payment Status Chip
                   Directionality(
                     textDirection: TextDirection.rtl,
                     child: Row(
@@ -243,59 +427,65 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  Center(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.teal[50],
-                        backgroundColor: Colors.teal[900],
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+              
+                  if (transaction['status'] == 'confirmed' && transaction['payment_status'] == 'pending')
+                    Center(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.teal[50],
+                          backgroundColor: Colors.teal[900],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 50,
+                          ),
                         ),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 50,
+                        onPressed: () {
+                        
+                          _showPaymentOptions(
+                            context,
+                            totalPrice,
+                            transaction['id'].toString(), 
+                            property['id'].toString(),
+                          );
+                        },
+                        child: const Text(
+                          "ادفع الان",
+                          style: TextStyle(fontSize: 20),
                         ),
                       ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) => PaymentPage(
-                                  amount: 250.0,
-                                     reservationId: transaction['id'].toString(),
-                                  onPaymentSuccess: () {
-                                    // نفذ الإجراء عند نجاح الدفع
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('تم الدفع بنجاح'),
-                                      ),
-                                    );
-                                    print(
-                                      "Payment success-----------------------",
-                                    );
-                                  },
-                                  onPaymentFailed: () {
-                                    // نفذ الإجراء عند فشل الدفع
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('فشل الدفع'),
-                                      ),
-                                    );
-                                    print(
-                                      "Payment failed-----------------------",
-                                    );
-                                  },
-                                ),
+                    )
+                  else if (transaction['payment_status'] == 'paid')
+                    Container(
+                      height: 30,
+                      color: Colors.teal[800],
+                      child: const Center(
+                        child: Text(
+                          "تم تاكيد الحجز و يمكنك الاستمتاع بالرحله الان",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
-                        );
-                      },
-                      child: const Text(
-                        "ادفع الان",
-                        style: TextStyle(fontSize: 20),
+                        ),
+                      ),
+                    )
+                  // هذا الجزء يعرض رسالة "تم رفض الطلب" لو الـ status هو 'rejected'
+                  else if (transaction['status'] == 'rejected')
+                    Container(
+                      height: 30,
+                      color: Colors.red[800],
+                      child: const Center(
+                        child: Text(
+                          "تم رفض طلب الحجز",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -305,23 +495,29 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
     );
   }
 
+  // Owner Approval Status Text and Color (for Owner perspective)
   String _getStatusText(String? status) {
     switch (status) {
       case 'pending':
         return 'فى انتظار موافقه صاحب العقار';
       case 'confirmed':
         return 'تم موافقه صاحب العقار يمكنك الدفع';
+      case 'rejected':
+        return 'تم رفض الطلب';
       default:
         return 'غير معروف';
     }
   }
 
+  // Payment Status Text and Color (general for all users)
   String _getPaymentStatusText(String? status) {
     switch (status) {
       case 'pending':
         return 'في انتظار الدفع';
       case 'paid':
         return 'تم الدفع';
+      case 'failed': // لو أضفت حالة 'failed' في الباك إند
+        return 'فشل الدفع';
       default:
         return 'غير معروف';
     }
@@ -333,6 +529,8 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
         return Colors.orange;
       case 'paid':
         return Colors.green;
+      case 'failed':
+        return Colors.red;
       default:
         return Colors.grey;
     }
@@ -358,10 +556,9 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body:
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : allReservations.isEmpty
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : allReservations.isEmpty
               ? Center(
                 child: Text(
                   'لا توجد حجوزات حالية',
@@ -373,9 +570,8 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                 child: ListView.builder(
                   padding: const EdgeInsets.all(10),
                   itemCount: allReservations.length,
-                  itemBuilder:
-                      (context, index) =>
-                          _buildReservationCard(allReservations[index]),
+                  itemBuilder: (context, index) =>
+                      _buildReservationCard(allReservations[index]),
                 ),
               ),
     );

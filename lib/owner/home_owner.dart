@@ -19,39 +19,69 @@ class HomeOwner extends StatefulWidget {
   State<HomeOwner> createState() => _HomeOwnerState();
 }
 
-//with Crud
 class _HomeOwnerState extends State<HomeOwner> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  TextEditingController searchController = TextEditingController();
   final Crud _crud = Crud();
   List<int> favoriteProperties = [];
   List allProperties = [];
   List filteredProperties = [];
-  String selectedPriceFilter = "All"; // الفلتر الافتراضي
-  bool showNameSearch = false;
-  bool showPriceSearch = false;
-  double? minPrice;
-  double? maxPrice;
-  TextEditingController nameSearchController = TextEditingController();
-  TextEditingController fromPriceController = TextEditingController();
-  TextEditingController toPriceController = TextEditingController();
+
+  // متحكمات حقول البحث داخل الـ Dialog
+  TextEditingController searchNameController = TextEditingController();
+  TextEditingController searchFromPriceController = TextEditingController();
+  TextEditingController searchToPriceController = TextEditingController();
+  // متحكمات لعدد الغرف (مبقوش في RoomCountSection منفصلة)
+  TextEditingController searchRoomCountController = TextEditingController(); // هنخليه حقل واحد لعدد الغرف بالضبط
+
+  // متغيرات Dropdown لفلترة الأدوار
+  String? selectedFloor; // هيكون لاختيار دور واحد فقط
+
+  // قائمة الأدوار المتاحة (تم تعديلها)
+  final List<String> floorOptions = [
+    'أرضي',
+    'أول',
+    'ثاني',
+  ];
+
+  // دالة لمطابقة ترتيب الأدوار (لو هنحتاج نفلتر 'من' و 'إلى' في المستقبل)
+  // حاليًا بنستخدمها للمطابقة النصية المباشرة
+  int _getFloorOrder(String floor) {
+    switch (floor) {
+      case 'أرضي':
+        return 0;
+      case 'أول':
+        return 1;
+      case 'ثاني':
+        return 2;
+      default:
+        return -1; // لو قيمة غير معروفة
+    }
+  }
 
   getRealstates() async {
     var response = await _crud.postRequest(linkView, {});
     if (response['status'] == 'success') {
       setState(() {
         allProperties = response['data'];
-        filteredProperties = allProperties;
+        filteredProperties = allProperties; // عرض الكل مبدئياً
       });
     }
     return response;
   }
+
   Future<void> load() async {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => HomeOwner()),
-    );
+    // هذه الدالة تعمل ريفريش للصفحة وتجلب كل العقارات الأصلية
+    await getRealstates();
+    loadFavorites();
+    // تأكد من مسح الفلاتر المعروضة في الـ Dialog عشان تبدأ من جديد
+    searchNameController.clear();
+    searchFromPriceController.clear();
+    searchToPriceController.clear();
+    searchRoomCountController.clear();
+    selectedFloor = null;
+    // لا نحتاج لـ setState() هنا لأن getRealstates() و loadFavorites() بيعملوها
   }
+
   void loadFavorites() async {
     var response = await _crud.postRequest(linkGetFav, {
       "user_id": sharedPref.getString("id").toString(),
@@ -73,34 +103,273 @@ class _HomeOwnerState extends State<HomeOwner> {
     getRealstates();
   }
 
-  void filterByName(String query) {
+  // دالة لتطبيق جميع الفلاتر بناءً على المدخلات
+  void applyFilters() {
+    List tempFiltered = List.from(allProperties); // ابدأ بكل العقارات
+
+    String nameQuery = searchNameController.text.toLowerCase();
+    String fromPrice = searchFromPriceController.text;
+    String toPrice = searchToPriceController.text;
+    String roomCountQuery = searchRoomCountController.text; // قيمة عدد الغرف
+
+    // فلتر الاسم
+    if (nameQuery.isNotEmpty) {
+      tempFiltered = tempFiltered.where((property) {
+        return property['address'] != null &&
+            property['address'].toString().toLowerCase().contains(nameQuery);
+      }).toList();
+    }
+
+    // فلتر السعر
+    double? minP = double.tryParse(fromPrice);
+    double? maxP = double.tryParse(toPrice);
+    if (minP != null || maxP != null) {
+      tempFiltered = tempFiltered.where((property) {
+        double rentAmount =
+            double.tryParse(property['rent_amount'].toString()) ?? 0;
+        bool matchesMin = minP == null || rentAmount >= minP;
+        bool matchesMax = maxP == null || rentAmount <= maxP;
+        return matchesMin && matchesMax;
+      }).toList();
+    }
+
+    // جديد: فلتر عدد الغرف (room_count) - رقمي
+    int? targetRoomCount = int.tryParse(roomCountQuery);
+    if (targetRoomCount != null) {
+      tempFiltered = tempFiltered.where((property) {
+        int propertyRoomCount = int.tryParse(property['room_count']?.toString() ?? '0') ?? 0;
+        return propertyRoomCount == targetRoomCount; // مطابقة العدد بالضبط
+      }).toList();
+    }
+
+    // تعديل: فلتر الطابق (floor_number) - مطابقة نصية
+    if (selectedFloor != null) {
+      tempFiltered = tempFiltered.where((property) {
+        String propertyFloor = property['floor_number']?.toString() ?? '';
+        return propertyFloor == selectedFloor; // مطابقة الطابق بالضبط
+      }).toList();
+    }
+
+
     setState(() {
-      filteredProperties =
-          allProperties.where((property) {
-            return query.isEmpty ||
-                (property['address'] != null &&
-                    property['address'].toString().toLowerCase().contains(
-                      query.toLowerCase(),
-                    ));
-          }).toList();
+      filteredProperties = tempFiltered;
     });
+    Navigator.pop(context); // إغلاق الـ Dialog بعد تطبيق الفلاتر
   }
 
-  void filterByPrice(String from, String to) {
-    setState(() {
-      double? min = double.tryParse(from);
-      double? max = double.tryParse(to);
+  // دالة لعرض الـ Search Dialog
+  void _showSearchDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Colors.teal[50],
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              title: Text(
+                "بحث وفلترة العقارات",
+                style: TextStyle(
+                  color: Colors.teal[900],
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.right,
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // حقل البحث بالاسم
+                    TextField(
+                      controller: searchNameController,
+                      decoration: InputDecoration(
+                        labelText: "ابحث بالاسم/العنوان",
+                        labelStyle: TextStyle(color: Colors.teal[800]),
+                        prefixIcon: Icon(Icons.location_on, color: Colors.teal[700]),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: Colors.teal.shade400),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: Colors.teal.shade600),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                      style: TextStyle(color: Colors.teal[900]),
+                    ),
+                    const SizedBox(height: 20),
 
-      filteredProperties =
-          allProperties.where((property) {
-            double rentAmount =
-                double.tryParse(property['rent_amount'].toString()) ?? 0;
+                    // حقول البحث بالسعر
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        "البحث حسب السعر",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.teal[900],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: searchFromPriceController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: "من",
+                              labelStyle: TextStyle(color: Colors.teal[800]),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                            ),
+                            style: TextStyle(color: Colors.teal[900]),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: searchToPriceController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: "إلى",
+                              labelStyle: TextStyle(color: Colors.teal[800]),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                            ),
+                            style: TextStyle(color: Colors.teal[900]),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
 
-            bool matchesMin = min == null || rentAmount >= min;
-            bool matchesMax = max == null || rentAmount <= max;
+                    // جديد: دمج حقول الطابق وعدد الغرف
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        "الطابق وعدد الغرف",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.teal[900],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    // الطابق (Dropdown)
+                    DropdownButtonFormField<String>(
+                      value: selectedFloor,
+                      hint: Text("اختر الطابق", style: TextStyle(color: Colors.teal[800])),
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                      items: [
+                        // خيار "مسح الاختيار" للطابق
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          child: Text(" اختر الطابق", style: TextStyle(color: Colors.grey)),
+                        ),
+                        ...floorOptions.map((String floor) {
+                          return DropdownMenuItem<String>(
+                            value: floor,
+                            child: Text(floor, style: TextStyle(color: Colors.teal[900])),
+                          );
+                        }).toList(),
+                      ],
+                      onChanged: (String? newValue) {
+                        setDialogState(() {
+                          selectedFloor = newValue;
+                        });
+                      },
+                      style: TextStyle(color: Colors.teal[900]),
+                    ),
+                    const SizedBox(height: 10),
+                    // عدد الغرف (TextField)
+                    TextField(
+                      controller: searchRoomCountController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: "عدد الغرف (بالضبط)",
+                        labelStyle: TextStyle(color: Colors.teal[800]),
+                        prefixIcon: Icon(Icons.meeting_room, color: Colors.teal[700]),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                      style: TextStyle(color: Colors.teal[900]),
+                    ),
+                    const SizedBox(height: 10),
+                   
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () async {
+                    // مسح الفلاتر وإعادة تحميل العقارات الأصلية
+                    _clearFiltersInDialog(setDialogState); // مسح حقول الـ Dialog
+                    Navigator.pop(context); // إغلاق الـ Dialog
+                    await load(); // إعادة تحميل العقارات كلها
+                  },
+                  child: Text(
+                    "إلغاء الفلاتر",
+                    style: TextStyle(color: Colors.red[700]),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context); // إغلاق الـ Dialog بدون مسح
+                  },
+                  child: Text(
+                    "إلغاء",
+                    style: TextStyle(color: Colors.teal[700]),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: applyFilters,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal[800],
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text("بحث"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
-            return matchesMin && matchesMax;
-          }).toList();
+  // جديد: دالة لمسح جميع مدخلات الفلاتر داخل الـ Dialog State
+  void _clearFiltersInDialog(Function setDialogState) {
+    setDialogState(() {
+      searchNameController.clear();
+      searchFromPriceController.clear();
+      searchToPriceController.clear();
+      searchRoomCountController.clear();
+      selectedFloor = null; // مسح اختيار الطابق
     });
   }
 
@@ -109,11 +378,11 @@ class _HomeOwnerState extends State<HomeOwner> {
     return Scaffold(
       backgroundColor: Colors.teal[50],
       key: _scaffoldKey,
-      drawer: _CustomDrawer(),
+      drawer: const _CustomDrawer(),
       appBar: AppBar(
         backgroundColor: Colors.teal[800],
         leading: IconButton(
-          icon: Icon(Icons.menu, color:  Colors.teal[50]),
+          icon: Icon(Icons.menu, color: Colors.teal[50]),
           onPressed: () {
             _scaffoldKey.currentState!.openDrawer();
           },
@@ -125,252 +394,86 @@ class _HomeOwnerState extends State<HomeOwner> {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
-                color:  Colors.teal[50],
+                color: Colors.teal[50],
               ),
             ),
-            Spacer(),
+            const Spacer(),
             IconButton(
-              icon: Icon(Icons.search, color:  Colors.teal[50]),
-              onPressed: () {
-                setState(() {
-                  showNameSearch = !showNameSearch;
-                  showPriceSearch = false;
-                });
-              },
-            ),
-            IconButton(
-              icon: Icon(Icons.filter_alt, color:  Colors.teal[50]),
-              onPressed: () {
-                setState(() {
-                  showPriceSearch = !showPriceSearch;
-                  showNameSearch = false;
-                });
-              },
+              icon: Icon(Icons.search, color: Colors.teal[50]),
+              onPressed: _showSearchDialog, // استدعاء الـ dialog عند الضغط
             ),
           ],
         ),
       ),
       body: RefreshIndicator(
-         onRefresh: load,
+        onRefresh: load,
         child: Padding(
           padding: const EdgeInsets.all(10),
           child: ListView(
             children: [
-              if (showNameSearch)
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.teal[700], // لون الخلفية
-                    borderRadius: BorderRadius.circular(6), // زوايا مدورة
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.teal.withOpacity(0.3),
-                        spreadRadius: 2,
-                        blurRadius: 5,
-                        offset: Offset(0, 3), // ظل خفيف
+              filteredProperties.isEmpty
+                  ? const Center(child: Text("لا يوجد عقارات متاحة"))
+                  : GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 0.69,
                       ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(15),
-                    child: TextField(
-                      controller: nameSearchController,
-                      decoration: InputDecoration(
-                        hintText: "ابحث عن عقار بالاسم",
-                        hintStyle: TextStyle(color: Colors.teal[900]),
-                        prefixIcon: Icon(Icons.search, color: Colors.teal[900]),
-                        border: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.teal.shade400),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.teal.shade600),
-                        ),
-                        filled: true,
-                        fillColor: Colors.teal[50],
-                      ),
-                      style: TextStyle(color: Colors.teal[900]),
-                      onChanged: (value) {
-                        filterByName(value);
+                      itemCount: filteredProperties.length,
+                      itemBuilder: (context, index) {
+                        var property = filteredProperties[index];
+                        return InkWell(
+                          onTap: () async {
+                            var result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => RealEstateDetailsPage(
+                                      fav: false,
+                                      favoriteProperties: favoriteProperties,
+                                      images: List<String>.from(property['photos']),
+                                      videos: List<String>.from(property['videos']),
+                                      id: '${property['id']}',
+                                      owner_id: '${property['id']}',
+                                      title: '${property['address']}',
+                                      price: '${property['rent_amount']}',
+                                      location: '${property['address']}',
+                                      description: '${property['description']}',
+                                      phone: '${property['phone']}',
+                                      state: '${property['property_state']}',
+                                      latitude: '${property['latitude']}',
+                                      longitude: '${property['longitude']}',
+                                      floor_number: '${property['floor_number']}',
+                                      room_count: '${property['room_count']}',
+                                      property_direction: '${property['property_direction']}',
+                                      rating:'${property['rate']}',
+                                    ),
+                              ),
+                            );
+
+                            if (result == true) {
+                              await getRealstates();
+                            }
+                            loadFavorites();
+                          },
+                          child: RealEstateCard(
+                            image: "$linkImageRoot/${property['photos'][0]}",
+                            title: '${property['address']}',
+                            price: '${property['rent_amount']}',
+                            location: '${property['address']}',
+                            description: '${property['description']}',
+                            rate: '${property['rate']}',
+                            status: '${property['property_state']}',
+                            isFavorite: favoriteProperties.contains(
+                              property['id'],
+                            ),
+                          ),
+                        );
                       },
                     ),
-                  ),
-                ),
-        
-              // حقل البحث بالسعر
-              if (showPriceSearch)
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.teal[700], // الخلفية البيضاء للبوكس
-                    borderRadius: BorderRadius.circular(6), // زوايا مدورة
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.3),
-                        spreadRadius: 2,
-                        blurRadius: 5,
-                        offset: Offset(0, 3), // ظل خفيف
-                      ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(15),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          "البحث حسب السعر  (متاح اضافه سعر واحد)",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.teal[50],
-                          ),
-                        ),
-                        SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: fromPriceController,
-                                decoration: InputDecoration(
-                                  labelText: "من",
-                                  labelStyle: TextStyle(color: Colors.teal[900]),
-                                  border: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: Colors.teal.shade900,
-                                    ),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: Colors.teal.shade900,
-                                    ),
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.teal[50],
-                                ),
-                                style: TextStyle(color: Colors.teal[900]),
-                                keyboardType: TextInputType.number,
-                              ),
-                            ),
-                            SizedBox(width: 10),
-                            Expanded(
-                              child: TextField(
-                                controller: toPriceController,
-                                decoration: InputDecoration(
-                                  labelText: "إلى",
-                                  labelStyle: TextStyle(color: Colors.teal[900]),
-                                  border: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: Colors.teal.shade900,
-                                    ),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: Colors.teal.shade900,
-                                    ),
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.teal[50],
-                                ),
-                                style: TextStyle(color: Colors.teal[900]),
-                                keyboardType: TextInputType.number,
-                              ),
-                            ),
-                            SizedBox(width: 10),
-                            ElevatedButton(
-                              onPressed: () {
-                                filterByPrice(
-                                  fromPriceController.text,
-                                  toPriceController.text,
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.teal[50],
-                                foregroundColor: Colors.teal[900],
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                              ),
-                              child: Text("بحث"),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-        
-              SizedBox(height: 10), // مسافة قبل عرض العقارات
-              // 🔹 عرض العقارات بعد الفلترة
-              filteredProperties.isEmpty
-                  ? Center(child: Text("لا يوجد عقارات متاحة"))
-                  : GridView.builder(
-                    shrinkWrap: true, // يجعل GridView يعمل داخل ListView
-                    physics:
-                        NeverScrollableScrollPhysics(), // تعطيل التمرير داخل GridView
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      childAspectRatio: 0.69,
-                    ),
-                    itemCount: filteredProperties.length,
-                    itemBuilder: (context, index) {
-                      var property = filteredProperties[index];
-                      return InkWell(
-                        onTap: () async {
-                          var result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) => RealEstateDetailsPage(
-                                    fav: false,
-                                    favoriteProperties: favoriteProperties,
-                                    images: List<String>.from(property['photos']),
-                                    videos: List<String>.from(property['videos']),
-                                    id: '${property['id']}',
-                                    owner_id: '${property['id']}',
-                                    title: '${property['address']}',
-                                    price: '${property['rent_amount']}',
-                                    location: '${property['address']}',
-                                    description: '${property['description']}',
-                                    phone: '${property['phone']}',
-                                    state: '${property['property_state']}',
-                                    latitude: '${property['latitude']}',
-                                    longitude: '${property['longitude']}',
-                                     floor_number:   '${property['floor_number']}',
-                                            room_count:  '${property['room_count']}',
-                                            property_direction:  '${property['property_direction']}',
-                                    rating:'${property['rate']}',
-                                  ),
-                            ),
-                          );
-        
-                          // ✅ إذا تم التحديث، نقوم بجلب البيانات من جديد
-                          if (result == true) {
-                            await getRealstates();
-                          }
-                          loadFavorites();
-                        },
-                        child: RealEstateCard(
-                          image: "$linkImageRoot/${property['photos'][0]}",
-                          title: '${property['address']}',
-                          price: '${property['rent_amount']}',
-                          location: '${property['address']}',
-                          description: '${property['description']}',
-                          rate: '${property['rate']}',
-                          status: '${property['property_state']}',
-                          isFavorite: favoriteProperties.contains(
-                            property['id'],
-                          ), // ✅ تحديد إذا كان العقار في المفضل
-                        ),
-                      );
-                    },
-                  ),
             ],
           ),
         ),
@@ -394,15 +497,13 @@ class _HomeOwnerState extends State<HomeOwner> {
   }
 }
 
-Crud _crud = Crud();
-
 class _CustomDrawer extends StatelessWidget {
   const _CustomDrawer();
 
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      backgroundColor: Colors.teal[900], // Changed to solid teal color
+      backgroundColor: Colors.teal[900],
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
         child: Column(
@@ -442,26 +543,26 @@ class _CustomDrawer extends StatelessWidget {
                 children: [
                   _buildDrawerItem(
                     context,
-                    title: "الصفحه الرئيسية", // "Home Page" in Arabic
+                    title: "الصفحه الرئيسية",
                     icon: Icons.home,
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (context) => HomeOwner()),
+                        MaterialPageRoute(builder: (context) => const HomeOwner()),
                       );
                     },
                   ),
                   const Divider(color: Colors.white54, height: 10),
                   _buildDrawerItem(
                     context,
-                    title: "حساب", // "Account" in Arabic
+                    title: "حساب",
                     icon: Icons.account_circle,
                     onTap: () {
                       if (sharedPref.getString("type").toString() == "owner") {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => OwnerRealstate(),
+                            builder: (context) => const OwnerRealstate(),
                           ),
                         );
                       }
@@ -470,14 +571,14 @@ class _CustomDrawer extends StatelessWidget {
                   const Divider(color: Colors.white54, height: 10),
                   _buildDrawerItem(
                     context,
-                    title: "الطلبات", // "Orders" in Arabic
+                    title: "الطلبات",
                     icon: Icons.list_alt,
                     onTap: () {
                        if (sharedPref.getString("type").toString() == "owner") {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => OwnerOrdersScreen(),
+                            builder: (context) => const OwnerOrdersScreen(),
                           ),
                         );
                       }
@@ -485,7 +586,7 @@ class _CustomDrawer extends StatelessWidget {
                            Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => RenterOrdersScreen(),
+                            builder: (context) => const RenterOrdersScreen(),
                           ),
                         );
                       }
@@ -494,19 +595,19 @@ class _CustomDrawer extends StatelessWidget {
                   const Divider(color: Colors.white54, height: 10),
                   _buildDrawerItem(
                     context,
-                    title: "المفضلة", // "Favorites" in Arabic
+                    title: "المفضلة",
                     icon: Icons.favorite,
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => Favorite()),
+                        MaterialPageRoute(builder: (context) => const Favorite()),
                       );
                     },
                   ),
                   const Divider(color: Colors.white54, height: 10),
                   _buildDrawerItem(
                     context,
-                    title: "تواصل معنا", // "Contact Us" in Arabic
+                    title: "تواصل معنا",
                     icon: Icons.contact_support,
                     onTap: () async {
                       try {
@@ -547,16 +648,16 @@ class _CustomDrawer extends StatelessWidget {
                       }
                     },
                   ),
-                  SizedBox(height: 270),
+                  const SizedBox(height: 270),
                   _buildDrawerItem(
                     context,
-                    title: "تسجيل الخروج", // "Sign Out" in Arabic
+                    title: "تسجيل الخروج",
                     icon: Icons.logout,
                     onTap: () {
                       sharedPref.clear();
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (context) => LoginScreen()),
+                        MaterialPageRoute(builder: (context) => const LoginScreen()),
                       );
                     },
                   ),

@@ -1,7 +1,7 @@
-   const String linkServerName = "http://192.168.247.1/rent";  
+   const String linkServerName = "http://192.168.243.1/rent";  
  /*  const String linkServerName = "http://10.0.2.2/rent";    */
 /*  const String linkServerName = "https://youssef.wuaze.com";  */
- /*  const String linkServerName = "http://localhost:3000";  */
+/*   const String linkServerName = "http://localhost:3000";  */
 
 //upload
 const String linkImageRoot = "$linkServerName/upload/photos";
@@ -46,8 +46,11 @@ const String linkOwnerOrder = "$linkServerName/orders/owner_orders.php";
 const String linkRenterOrder = "$linkServerName/orders/renter_orders.php";
 const String linkDeleteOrder = "$linkServerName/orders/delete_order.php";
 const String linkUpdateOrderStatus = "$linkServerName/orders/update_status.php";
+const String linkRejectOrder = "$linkServerName/orders/reject_order.php";
 //payment
 const String linkCheckPaymentStatus = "$linkServerName/payment/paymob_webhook.php";
+const String linkGetPaymobOrderId = "$linkServerName/payment/get_paymob_order_id.php";
+const String linkUpdatePaymobOrderId = "$linkServerName/payment/update_paymob_order_id.php";
 
 
 

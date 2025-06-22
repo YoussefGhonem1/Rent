@@ -9,11 +9,7 @@ import '../linkapi.dart';
 import '../main.dart';
 import 'favorites.dart';
 
-enum PaymentMethod { cashOnDelivery, online }
 
-const String paymobApiKey =
-    "ZXlKaGJHY2lPaUpJVXpVeE1pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SmpiR0Z6Y3lJNklrMWxjbU5vWVc1MElpd2ljSEp2Wm1sc1pWOXdheUk2TVRBeU56UTNNaXdpYm1GdFpTSTZJbWx1YVhScFlXd2lmUS5pVkxBTThQOGJpYzB5YVk0S2x6dkYxZWpCWTVMWkczel9oWTF6d1daYlFDZ0dVSGtuR2s1MmpfbG1kQlFPbXJ5dlFlQXk0UlNZYUJMQ19PN2Z0WXVqUQ==";
-const String paymobIntegrationId = "5001272";
 
 class RealEstateDetailsPage extends StatefulWidget {
   final List<String> images;
@@ -300,7 +296,6 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
 
       if (response['status'] == "unavailable") {
         List reservations = response['reservations'] ?? [];
-
         // ✅ عرض جميع التواريخ المحجوزة
         showDialog(
           context: context,
@@ -311,6 +306,7 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
           SnackBar(content: Text("This property is currently available.")),
         );
       }
+    return response['status'];
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error checking availability: ${e.toString()}")),
