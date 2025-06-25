@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:rento/core/utils/functions/theme.dart';
 import 'package:video_player/video_player.dart';
 import '../admin/control_admin.dart';
 import '../crud.dart';
@@ -26,6 +27,7 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _rentAmountController = TextEditingController();
   final TextEditingController _saleAmountController = TextEditingController();
+  final TextEditingController _termsAndConditionsController = TextEditingController();
   String? selectedFloor;
   int? selectedRooms;
   String? selectedDirection;
@@ -37,11 +39,8 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
   Future<void> _requestPermissions() async {
     final status = await Permission.manageExternalStorage.request();
     if (!status.isGranted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('يجب منح صلاحيات الوصول لتحديد الصور/الفيديوهات'),
-        ),
-      );
+       showCustomMessage(context,  "يجب منح صلاحيات الوصول لتحديد الصور/الفيديوهات", isSuccess: true);
+  
     }
   }
 
@@ -55,7 +54,7 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
     }
   }
 
-  Future<void> _pickVideo() async {
+ /*  Future<void> _pickVideo() async {
     final pickedVideo = await ImagePicker().pickVideo(
       source: ImageSource.gallery,
     );
@@ -85,7 +84,7 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
       _isPlaying[index] = !_isPlaying[index];
     });
   }
-
+ */
   editRealstate() async {
     isloading = true;
     setState(() {});
@@ -103,6 +102,7 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
           "floor_number": selectedFloor.toString(),
           "room_count": selectedRooms.toString(),
           "property_direction": selectedDirection.toString(),
+           "terms_and_conditions": _termsAndConditionsController.text,
         },
         _selectedImages,
         _selectedVideos,
@@ -131,17 +131,18 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
 
   @override
   void initState() {
-    _descriptionController.text = widget.realdata['description'];
-    _phoneController.text = widget.realdata['phone'];
-    _locationController.text = widget.realdata['address'];
-    _rentAmountController.text = widget.realdata['rent_amount'];
-    selectedFloor = widget.realdata['floor_number']?.toString();
+    _descriptionController.text = widget.realdata['description'] ?? '';
+    _phoneController.text = widget.realdata['phone'] ?? '';
+    _locationController.text = widget.realdata['address'] ?? '';
+    _rentAmountController.text = widget.realdata['rent_amount']?? '';
+    _termsAndConditionsController.text = widget.realdata['terms_and_conditions']?? '';
+     selectedFloor = widget.realdata['floor_number']?.toString();
     selectedRooms =
         widget.realdata['room_count'] != null
             ? int.tryParse(widget.realdata['room_count'].toString())
             : null;
     selectedDirection =
-        widget.realdata['property_direction']?.toString();
+        widget.realdata['property_direction']?.toString(); 
         
     super.initState();
   }
@@ -480,6 +481,27 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
                                 return null;
                               },
                             ),
+                               const SizedBox(height: 20),
+                            TextFormField(
+                              controller: _termsAndConditionsController,
+                              maxLines: 4,
+                              decoration: InputDecoration(
+                                labelText: "الشروط التى يجب ان يتبعها المستأجر",
+                                labelStyle: TextStyle(color: Colors.teal[900]),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value?.isEmpty ?? true) {
+                                  return "الرجاء إدخال الوصف";
+                                }
+                                return null;
+                              },
+                            ), 
                             const SizedBox(height: 20),
                             TextFormField(
                               controller: _phoneController,

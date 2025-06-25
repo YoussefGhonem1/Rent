@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rento/chat/chat_screen.dart';
+import 'package:rento/componants/custom_drawer.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
 import 'package:rento/owner/owner_orders_screen.dart';
@@ -97,7 +98,8 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
     return Scaffold(
       backgroundColor: Colors.teal[50],
       key: _scaffoldKey,
-      drawer: _CustomDrawer(),
+      /* drawer: _CustomDrawer(), */
+       drawer: CustomDrawer(crud: _crud, userType: sharedPref.getString("type").toString()), 
       appBar: AppBar(
         backgroundColor: Colors.teal[800],
         leading: IconButton(
@@ -181,13 +183,15 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
                                           property['videos'],
                                         ),
                                         id: '${property['id']}',
-                                        owner_id: '${property['id']}',
+                                        owner_id: '${property['owner_id']}',
 
                                         title: '${property['address']}',
                                         price: '${property['rent_amount']}',
                                         location: '${property['address']}',
                                         description:
                                             '${property['description']}',
+                                            terms_and_conditions:
+                                            '${property['terms_and_conditions']}',
                                         phone: '${property['phone']}',
                                         state: '${property['property_state']}',
                                         latitude: '${property['latitude']}',
@@ -255,41 +259,55 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                Icons.location_on,
-                                                color: Colors.teal[900],
-                                                size: 24,
-                                              ),
-                                              Text(
-                                                '${property['address']}',
-                                                style: TextStyle(
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.bold,
+                                          Directionality(
+                                            textDirection:
+                                                TextDirection.rtl, // الاتجاه من اليمين لليسار
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.location_on,
                                                   color: Colors.teal[900],
+                                                  size: 24,
                                                 ),
-                                              ),
-                                            ],
+                                                Text(
+                                                  (property['address']?.isNotEmpty ==
+                                                              true &&
+                                                         property['address']!.length >
+                                                              10)
+                                                      ? '${property['address']!.substring(0, 10)}...'
+                                                      : property['address'] ??
+                                                          'لا يوجد عنوان',
+                                                  style: TextStyle(
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.teal[900],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                           const SizedBox(height: 3),
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                Icons.attach_money,
-                                                color: Colors.teal[900],
-                                                size: 20,
-                                              ),
-                                              // السعر
-                                              Text(
-                                                " ${'${property['rent_amount']}'} L.E",
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
+                                          Directionality(
+                                            textDirection:
+                                                TextDirection.rtl, // الاتجاه من اليمين لليسار
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.attach_money,
                                                   color: Colors.teal[900],
+                                                  size: 20,
                                                 ),
-                                              ),
-                                            ],
+                                                // السعر
+                                                Text(
+                                                  " ${'${property['rent_amount']}'}  ج.م",
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.teal[900],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                           const SizedBox(height: 3),
                                         ],
@@ -429,7 +447,7 @@ class _OwnerRealstateState extends State<OwnerRealstate> {
   }
 }
 
-Crud _crud = Crud();
+/* Crud _crud = Crud();
 
 class _CustomDrawer extends StatelessWidget {
   const _CustomDrawer();
@@ -621,4 +639,4 @@ class _CustomDrawer extends StatelessWidget {
       onTap: onTap,
     );
   }
-}
+} */

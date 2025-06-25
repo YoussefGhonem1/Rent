@@ -1,15 +1,11 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
+import 'package:rento/core/utils/functions/theme.dart';
+import 'package:rento/notifications/push_function.dart';
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import '../core/utils/functions/get_location.dart';
 import '../crud.dart';
 import '../linkapi.dart';
 import '../main.dart';
 import 'favorites.dart';
-
-
 
 class RealEstateDetailsPage extends StatefulWidget {
   final List<String> images;
@@ -22,6 +18,7 @@ class RealEstateDetailsPage extends StatefulWidget {
   final String price;
   final String location;
   final String description;
+  final String terms_and_conditions;
   final String phone;
   late final String latitude;
   final String longitude;
@@ -41,6 +38,7 @@ class RealEstateDetailsPage extends StatefulWidget {
     required this.price,
     required this.location,
     required this.description,
+    required this.terms_and_conditions,
     required this.phone,
     required this.rating,
     required this.state,
@@ -65,13 +63,16 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
   String finalgroupType = "";
   String finalnumberOfPeople = "";
 
+  String messageTitle = "طلب حجز عقار جديد";
+  late String messageBody;
+
   bool isOwnerOrAdmin(String userId, String propertyOwnerId) {
     // Check if the user is the owner of the property or an admin
     return userId == propertyOwnerId || sharedPref.getString("role") == "admin";
   }
 
   int calculateNumberOfDays(DateTime start, DateTime end) {
-    return end.difference(start).inDays;
+    return end.difference(start).inDays + 1;
   }
 
   double calculateTotalPrice(int numberOfDays, double dailyPrice) {
@@ -82,6 +83,8 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
   void initState() {
     super.initState();
     stateNotifier = ValueNotifier(widget.state);
+
+    messageBody = "لديك طلب حجز جديد لعقار ${widget.title}";
 
     fetchPropertyState(); // جلب حالة العقار من الخادم
     checkUserBooking(); // جلب حجوزات المستخدم
@@ -277,14 +280,9 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
     if (response['status'] == "success") {
       await checkUserBooking(); // تحديث قائمة الحجوزات
       await fetchPropertyState(); // تحديث حالة العقار
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("✅ تم إلغاء الحجز بنجاح")));
+      showCustomMessage(context, "✅ تم إلغاء الحجز بنجاح", isSuccess: true);
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("⚠ فشل في إلغاء الحجز")));
+      showCustomMessage(context, "⚠ فشل في إلغاء الحجز", isSuccess: false);
     }
   }
 
@@ -302,14 +300,18 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
           builder: (context) => _showUnavailableDatesDialog(reservations),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("This property is currently available.")),
+        showCustomMessage(
+          context,
+          "هذا العقار متاح حالياً للحجز.",
+          isSuccess: true,
         );
       }
-    return response['status'];
+      return response['status'];
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error checking availability: ${e.toString()}")),
+      showCustomMessage(
+        context,
+        "❌ حدث خطأ أثناء التحقق من التوافر:}",
+        isSuccess: false,
       );
     }
   }
@@ -357,15 +359,23 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
     );
   }
 
+  // في ملف details.dart
+  // ... (باقي كود الكلاس _RealEstateDetailsPageState)
+
   Widget _showBookingDialog() {
-    DateTime minStartDate = DateTime.now();
-    DateTime startDate = minStartDate;
-    DateTime endDate = startDate.add(Duration(days: 1));
+    // الحد الأدنى لاختيار تاريخ البدء هو اليوم الحالي
+    DateTime minPossibleStartDate = DateTime.now();
+
+    // تهيئة تواريخ البدء والانتهاء
+    // startDate: يبدأ من اليوم الحالي
+    // endDate: يبدأ من نفس يوم startDate لتمثيل حجز ليوم واحد افتراضيًا
+    DateTime startDate = minPossibleStartDate;
+    DateTime endDate = startDate;
+
+    // حساب عدد الأيام والتكلفة الإجمالية الأولية
     int numberOfDays = calculateNumberOfDays(startDate, endDate);
-    double totalPrice = calculateTotalPrice(
-      numberOfDays,
-      double.parse(widget.price),
-    );
+    double dailyPrice = double.parse(widget.price);
+    double totalPrice = calculateTotalPrice(numberOfDays, dailyPrice);
 
     return StatefulBuilder(
       builder: (context, setDialogState) {
@@ -387,45 +397,39 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // زر اختيار تاريخ البدء
               _buildDatePickerButton(
                 context,
                 label: "تاريخ البدء",
                 date: startDate,
-                minDate: minStartDate,
+                minDate: minPossibleStartDate, // الحد الأدنى هو اليوم الحالي
                 onDateSelected: (picked) {
                   setDialogState(() {
                     startDate = picked;
-                    if (endDate.difference(startDate).inDays <= 0 ||
-                        endDate.difference(startDate).inSeconds < 0) {
-                      endDate = picked.add(Duration(days: 1));
+                    // ✅ إذا أصبح تاريخ الانتهاء قبل تاريخ البدء الجديد، نعدله ليساوي تاريخ البدء الجديد.
+                    if (endDate.isBefore(startDate)) {
+                      endDate = startDate;
                     }
+                    // إعادة حساب عدد الأيام والتكلفة بعد تحديث التواريخ
                     numberOfDays = calculateNumberOfDays(startDate, endDate);
-                    totalPrice = calculateTotalPrice(
-                      numberOfDays,
-                      double.parse(widget.price),
-                    );
+                    totalPrice = calculateTotalPrice(numberOfDays, dailyPrice);
                   });
                 },
               ),
               const SizedBox(height: 10),
+              // زر اختيار تاريخ الانتهاء
               _buildDatePickerButton(
                 context,
                 label: "تاريخ الانتهاء",
                 date: endDate,
-                minDate: startDate.add(Duration(days: 1)),
+                minDate:
+                    startDate, // ✅ الحد الأدنى لتاريخ الانتهاء هو تاريخ البدء نفسه
                 onDateSelected: (picked) {
                   setDialogState(() {
                     endDate = picked;
-                    if (startDate == minStartDate) {
-                      numberOfDays =
-                          calculateNumberOfDays(startDate, endDate) + 1;
-                    } else {
-                      numberOfDays = calculateNumberOfDays(startDate, endDate);
-                    }
-                    totalPrice = calculateTotalPrice(
-                      numberOfDays,
-                      double.parse(widget.price),
-                    );
+                    // إعادة حساب عدد الأيام والتكلفة بعد تحديث تاريخ الانتهاء
+                    numberOfDays = calculateNumberOfDays(startDate, endDate);
+                    totalPrice = calculateTotalPrice(numberOfDays, dailyPrice);
                   });
                 },
               ),
@@ -446,7 +450,7 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(
-                "انهاء",
+                "إلغاء",
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -457,14 +461,25 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.teal[50]),
               onPressed: () async {
+                // ✅ التحقق النهائي: تأكد أن تاريخ البدء ليس بعد تاريخ الانتهاء
+                if (startDate.isAfter(endDate)) {
+                  showCustomMessage(
+                    context,
+                    "تاريخ البدء يجب أن يكون قبل أو يساوي تاريخ الانتهاء.",
+                    isSuccess: false,
+                  );
+
+                  return; // لا تكمل إذا كان الشرط غير محقق
+                }
+
                 String userId = sharedPref.getString("id").toString();
                 String propertyOwnerId = widget.owner_id;
 
-                Navigator.pop(context);
+                Navigator.pop(context); // إغلاق الـ Dialog الحالي
                 await bookProperty(widget.id, startDate, endDate);
               },
               child: Text(
-                "تاكيد",
+                "تأكيد",
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -541,21 +556,23 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
         'property_id': propertyId,
         'start_date': start.toIso8601String().split('T')[0],
         'end_date': end.toIso8601String().split('T')[0],
-        'numberOfPeople' : finalnumberOfPeople , 
-        'groupType': finalgroupType== 'family' ?   'عائلة'  :  'اصدقاء'
+        'numberOfPeople': finalnumberOfPeople,
+        'groupType': finalgroupType == 'family' ? 'عائلة' : 'اصدقاء',
       });
 
       if (response['status'] == "success") {
-/*         stateNotifier.value = "booked"; // تحديث حالة العق ر */
-        await checkUserBooking(); // تحديث قائمة الحجوزات
-
-        // عرض رسالة نجاح الحجز
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "تم الارسال الى صاحب العقار",
-            ),
-          ),
+        await checkUserBooking();
+        print("----------------------------------------------------");
+        print("${widget.owner_id}");
+        await sendNotificationToUserV1(
+          widget.owner_id,
+          messageTitle,
+          messageBody,
+        );
+        showCustomMessage(
+          context,
+          "تم الارسال الى صاحب العقار",
+          isSuccess: true,
         );
 
         // تحديث واجهة المستخدم
@@ -563,16 +580,10 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
           setState(() {});
         }
       } else {
-        // عرض رسالة فشل الحجز
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("⚠ فشل في الحجز")));
+        showCustomMessage(context, "⚠ فشل في الحجز", isSuccess: false);
       }
     } catch (e) {
-      // عرض رسالة خطأ
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("❌ حدث خطأ: ${e.toString()}")));
+      showCustomMessage(context, "❌ حدث خطأ", isSuccess: false);
     }
   }
 
@@ -897,7 +908,7 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
                         ),
                         SizedBox(width: 2),
                         Text(
-                          'المكان',
+                          'المكان : ',
                           textAlign: TextAlign.right,
                           style: TextStyle(
                             fontSize: 24,
@@ -907,7 +918,10 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
                         ),
                         SizedBox(width: 2),
                         Text(
-                          ' : ${widget.title}',
+                          (widget.title?.isNotEmpty == true &&
+                                  widget.title!.length > 20)
+                              ? '${widget.title!.substring(0, 20)}'
+                              : widget.title ?? 'لا يوجد عنوان',
                           textAlign: TextAlign.right,
                           style: TextStyle(
                             fontSize: 24,
@@ -1042,7 +1056,9 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
                         ),
                         SizedBox(width: 5),
                         Text(
-                          widget.floor_number,
+                          widget.floor_number == "null"
+                              ? "غير محدد"
+                              : widget.floor_number,
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
@@ -1069,7 +1085,9 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
                         ),
                         SizedBox(width: 5),
                         Text(
-                          widget.room_count,
+                          widget.room_count == "null"
+                              ? "غير محدد"
+                              : widget.room_count,
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
@@ -1096,7 +1114,9 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
                         ),
                         SizedBox(width: 5),
                         Text(
-                          widget.property_direction,
+                          widget.property_direction == "null"
+                              ? "غير محدد"
+                              : widget.property_direction,
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
@@ -1161,24 +1181,60 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 10),
-                  Directionality(
+                  const SizedBox(height: 5),
+                   Directionality(
                     textDirection: TextDirection.rtl,
                     child: Row(
                       children: [
-                        SizedBox(width: 10),
-                        Text(
-                          widget.description,
-                          style: TextStyle(
-                            fontSize: 16,
-
-                            color: Colors.teal[900],
+                        const SizedBox(width: 10),
+                        // ✅ تم وضع Text داخل Expanded
+                        Expanded( 
+                          child: Text(
+                            widget.description,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.teal[900],
+                            ),
+                        
                           ),
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(height: 10),
+                   Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Text(
+                     " الشروط التى يجب ان يتبعها المستأجر",
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal[900],
+                      ),
+                    ),
+                  ),
 
+                  const SizedBox(height: 5),
+                   Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 10),
+                        // ✅ تم وضع Text داخل Expanded
+                        Expanded( 
+                          child: Text(
+                            widget.terms_and_conditions == "null"
+                                ? "لا يوجد شروط"
+                                : widget.terms_and_conditions,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.teal[900],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   Row(
                     children: [

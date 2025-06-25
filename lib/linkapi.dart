@@ -9,6 +9,7 @@ const String linkVideoRoot = "$linkServerName/upload/videos";
 //auth
 const String linkRegister = "$linkServerName/auth/register.php";
 const String linkLogin = "$linkServerName/auth/login.php";
+const String linkUpdateUserFcmToken = "$linkServerName/auth/update_fcm_token.php";
 //realstate
 const String linkView = "$linkServerName/realstates/view.php";
 const String linkAdd = "$linkServerName/realstates/add.php";
@@ -19,6 +20,9 @@ const String linkViewOwnerRealstates = "$linkServerName/realstates/viewOwnerReal
 const String linkDeleteImage = "$linkServerName/realstates/delete_photos.php";
 const String linkGetNotApprove = "$linkServerName/realstates/get_not_approved.php";
 const String linkApprove = "$linkServerName/realstates/approve.php";
+const String linkGetOwnerId = "$linkServerName/realstates/get_owner_id.php";
+
+
 //favorites
 const String linkAddFav = "$linkServerName/favorites/add_fav.php";
 const String linkDelFav = "$linkServerName/favorites/del_fav.php";
@@ -51,7 +55,8 @@ const String linkRejectOrder = "$linkServerName/orders/reject_order.php";
 const String linkCheckPaymentStatus = "$linkServerName/payment/paymob_webhook.php";
 const String linkGetPaymobOrderId = "$linkServerName/payment/get_paymob_order_id.php";
 const String linkUpdatePaymobOrderId = "$linkServerName/payment/update_paymob_order_id.php";
-
+//notifications
+const String linkGetFcmToken = "$linkServerName/notifications/get_fcm_token.php";
 
 
  

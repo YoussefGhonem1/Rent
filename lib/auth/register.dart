@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rento/core/utils/functions/theme.dart'; // تأكد من المسار الصحيح لوظيفة showCustomMessage
 import '../crud.dart';
 import '../linkapi.dart';
 import '../valid.dart';
@@ -7,6 +8,8 @@ import 'login.dart';
 // (باقي الكود زي ما هو)
 
 class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
+
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
 }
@@ -17,11 +20,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool isloading = false;
   // late final String? Function(String?) val; // هذا السطر لم يعد ضروريا هنا ويمكن حذفه
   final TextEditingController nameController = TextEditingController();
-
   final TextEditingController emailController = TextEditingController();
-
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController(); // ✅ جديد: متحكم رقم التليفون
   String? selectedRole;
 
   // هنا هنضيف متغير عشان نعرض رسائل الخطأ
@@ -39,6 +41,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           "username": nameController.text,
           "email": emailController.text,
           "password": passwordController.text,
+          "phone_number": phoneController.text, // ✅ جديد: إرسال رقم التليفون
           "type": selectedRole!,
         });
 
@@ -46,25 +49,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
         setState(() {});
 
         if (response != null && response['status'] == "success") {
-          // هنا ممكن تعرض رسالة نجاح بسيطة للمستخدم قبل الانتقال
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(response['message'] ?? "تم التسجيل بنجاح!")),
-          );
+           showCustomMessage(context,  response['message'] ?? "تم التسجيل بنجاح!", isSuccess: true); // ✅ استخدام showCustomMessage
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => LoginScreen()),
           );
         } else {
-          // لو الـ status مش "success" يبقى فيه خطأ
           String message = "فشل التسجيل. حاول مرة أخرى.";
           if (response != null && response['message'] != null) {
-            message = response['message']; // استخدم الرسالة اللي جاية من الباك إند
+            message = response['message'];
           }
           setState(() {
             _errorMessage = message;
           });
+          showCustomMessage(context, message, isSuccess: false); // ✅ استخدام showCustomMessage
           print("Registration failed: $message");
-          print("Response Body: $response"); // طباعة الـ response بالكامل للمراجعة
+          print("Response Body: $response");
         }
       } catch (e) {
         isloading = false;
@@ -72,12 +72,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         setState(() {
           _errorMessage = "حدث خطأ غير متوقع. يرجى المحاولة لاحقاً.";
         });
+        showCustomMessage(context, "حدث خطأ غير متوقع: ${e.toString()}", isSuccess: false); // ✅ استخدام showCustomMessage
         print("Exception occurred: $e");
       }
     } else if (selectedRole == null) {
       setState(() {
         _errorMessage = "الرجاء اختيار نوع الحساب (مالك أو مستأجر).";
       });
+       showCustomMessage(context, "الرجاء اختيار نوع الحساب (مالك أو مستأجر).", isSuccess: false); // ✅ استخدام showCustomMessage
     }
   }
 
@@ -115,7 +117,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           return validInput(val!, 3, 30);
                         },
                         decoration: InputDecoration(
-                          labelText: "الاسم الكامل",
+                          labelText: "الاسم ثنائي",
                           labelStyle: TextStyle(color: Colors.teal[900]),
                           filled: true,
                           fillColor: Colors.white,
@@ -153,6 +155,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           prefixIcon: Icon(
                             Icons.email,
+                            color: Colors.teal[900],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      // ✅ جديد: حقل رقم الهاتف
+                      TextFormField(
+                        controller: phoneController,
+                        keyboardType: TextInputType.phone, // نوع لوحة المفاتيح
+                        validator: (val) {
+                          if (val == null || val.isEmpty) {
+                            return "رقم الهاتف مطلوب";
+                          }
+                          if (val.length < 10 || val.length > 15 || !RegExp(r'^[0-9]+$').hasMatch(val)) {
+                            return "رقم هاتف غير صحيح"; // تحقق بسيط من الطول والأرقام فقط
+                          }
+                          return null;
+                        },
+                        decoration: InputDecoration(
+                          labelText: "رقم الهاتف",
+                          labelStyle: TextStyle(color: Colors.teal[900]),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide.none,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.phone,
                             color: Colors.teal[900],
                           ),
                         ),
@@ -219,7 +250,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 activeColor: Colors.teal[900],
                               ),
                               Text('مالك', style: TextStyle(color: Colors.teal[900])),
-                              SizedBox(width: 20),
+                              const SizedBox(width: 20),
                               Radio<String>(
                                 value: 'renter',
                                 groupValue: selectedRole,
@@ -267,7 +298,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             });
                           }
                         },
-                        child: Text(
+                        child: const Text(
                           "سجل",
                           style: TextStyle(
                             color: Colors.white,

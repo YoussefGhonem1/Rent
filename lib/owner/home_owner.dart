@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rento/componants/custom_drawer.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
 import 'package:rento/owner/owner_orders_screen.dart';
@@ -290,7 +291,7 @@ class _HomeOwnerState extends State<HomeOwner> {
                             value: floor,
                             child: Text(floor, style: TextStyle(color: Colors.teal[900])),
                           );
-                        }).toList(),
+                        }),
                       ],
                       onChanged: (String? newValue) {
                         setDialogState(() {
@@ -378,7 +379,8 @@ class _HomeOwnerState extends State<HomeOwner> {
     return Scaffold(
       backgroundColor: Colors.teal[50],
       key: _scaffoldKey,
-      drawer: const _CustomDrawer(),
+      /* drawer: const _CustomDrawer(), */
+       drawer: CustomDrawer(crud: _crud, userType: sharedPref.getString("type").toString()), 
       appBar: AppBar(
         backgroundColor: Colors.teal[800],
         leading: IconButton(
@@ -437,11 +439,13 @@ class _HomeOwnerState extends State<HomeOwner> {
                                       images: List<String>.from(property['photos']),
                                       videos: List<String>.from(property['videos']),
                                       id: '${property['id']}',
-                                      owner_id: '${property['id']}',
+                                      owner_id: '${property['owner_id']}',
                                       title: '${property['address']}',
                                       price: '${property['rent_amount']}',
                                       location: '${property['address']}',
                                       description: '${property['description']}',
+                                       terms_and_conditions:
+                                            '${property['terms_and_conditions']}',
                                       phone: '${property['phone']}',
                                       state: '${property['property_state']}',
                                       latitude: '${property['latitude']}',
@@ -496,7 +500,7 @@ class _HomeOwnerState extends State<HomeOwner> {
     );
   }
 }
-
+/* 
 class _CustomDrawer extends StatelessWidget {
   const _CustomDrawer();
 
@@ -687,4 +691,4 @@ class _CustomDrawer extends StatelessWidget {
       onTap: onTap,
     );
   }
-}
+} */

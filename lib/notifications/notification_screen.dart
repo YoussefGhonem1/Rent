@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 class NotificationScreen extends StatelessWidget {
   static const String routeName = '/notification';
   final RemoteMessage message;
-  const NotificationScreen({Key? key, required this.message}) : super(key: key);
+  const NotificationScreen({super.key, required this.message});
 
   @override
   Widget build(BuildContext context) {

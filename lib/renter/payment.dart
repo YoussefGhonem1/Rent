@@ -226,8 +226,6 @@ class _PaymentPageState extends State<PaymentPage> {
             },
             onNavigationRequest: (request) {
               print('WebView Navigation request: ${request.url}');
-              // Paymob redirects to specific URLs on success/failure
-              // الـ webhook هو الذي سيحدث قاعدة البيانات. هنا فقط نخبر تطبيق Flutter.
               if (request.url.contains("success")) {
                 print("Payment Success URL detected!");
                 widget.onPaymentSuccess(); // إشعار للصفحة الأب بالنجاح

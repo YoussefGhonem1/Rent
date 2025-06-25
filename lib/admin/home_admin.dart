@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rento/admin/approve_screen.dart';
 import 'package:rento/admin/control_admin.dart';
 import 'package:rento/admin/order_admin_screen.dart';
+import 'package:rento/componants/custom_drawer.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
 import 'package:rento/renter/details.dart';
@@ -297,7 +298,7 @@ class _HomeAdminState extends State<HomeAdmin> {
                             value: floor,
                             child: Text(floor, style: TextStyle(color: Colors.teal[900])),
                           );
-                        }).toList(),
+                        }),
                       ],
                       onChanged: (String? newValue) {
                         setDialogState(() {
@@ -373,7 +374,8 @@ class _HomeAdminState extends State<HomeAdmin> {
     return Scaffold(
       backgroundColor: Colors.teal[50],
       key: _scaffoldKey,
-      drawer: const _CustomDrawer(),
+      /* drawer: const _CustomDrawer(), */
+       drawer: CustomDrawer(crud: _crud, userType: sharedPref.getString("type").toString()), 
       appBar: AppBar(
         backgroundColor: Colors.teal[800],
         leading: IconButton(
@@ -437,6 +439,8 @@ class _HomeAdminState extends State<HomeAdmin> {
                                       price: '${property['rent_amount']}',
                                       location: '${property['address']}',
                                       description: '${property['description']}',
+                                       terms_and_conditions:
+                                            '${property['terms_and_conditions']}',
                                       phone: '${property['phone']}',
                                       state: '${property['property_state']}',
                                       latitude: '${property['latitude']}',
@@ -493,7 +497,7 @@ class _HomeAdminState extends State<HomeAdmin> {
     );
   }
 }
-
+/* 
 class _CustomDrawer extends StatelessWidget {
   const _CustomDrawer();
 
@@ -652,4 +656,4 @@ class _CustomDrawer extends StatelessWidget {
       onTap: onTap,
     );
   }
-}
+} */

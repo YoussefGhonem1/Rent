@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rento/admin/approve_screen.dart';
 import 'package:rento/admin/control_admin.dart';
 import 'package:rento/chatadmin/AdminChatList.dart';
+import 'package:rento/componants/custom_drawer.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
 import 'package:rento/renter/favorites.dart';
@@ -350,7 +351,8 @@ class _OrderAdminScreenState extends State<OrderAdminScreen> {
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
       ),
-      drawer: _CustomDrawer(),
+      /* drawer: _CustomDrawer(), */
+       drawer: CustomDrawer(crud: _crud, userType: sharedPref.getString("type").toString()), 
       body:
           isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -374,7 +376,7 @@ class _OrderAdminScreenState extends State<OrderAdminScreen> {
     );
   }
 }
-
+/* 
 Crud _crud = Crud();
 
 class _CustomDrawer extends StatelessWidget {
@@ -536,3 +538,4 @@ class _CustomDrawer extends StatelessWidget {
     );
   }
 }
+ */

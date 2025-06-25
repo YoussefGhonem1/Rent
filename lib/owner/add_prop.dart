@@ -24,6 +24,7 @@ class _AddRealEstatePageState extends State<AddRealEstatePage> {
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _rentAmountController = TextEditingController();
   final TextEditingController _saleAmountController = TextEditingController();
+   final TextEditingController _termsAndConditionsController = TextEditingController();
   final List<File> _selectedImages = [];
   final List<File> _selectedVideos = [];
   final List<VideoPlayerController> _videoControllers = [];
@@ -95,6 +96,7 @@ class _AddRealEstatePageState extends State<AddRealEstatePage> {
           "floor_number": selectedFloor.toString(),
           "room_count": selectedRooms.toString(),
           "property_direction": selectedDirection.toString(),
+           "terms_and_conditions": _termsAndConditionsController.text,
         },
         _selectedImages,
         _selectedVideos,
@@ -541,7 +543,30 @@ class _AddRealEstatePageState extends State<AddRealEstatePage> {
                                   },
                                 ),
                                 const SizedBox(height: 20),
-
+                                TextFormField(
+                                  controller: _termsAndConditionsController,
+                                  maxLines: 4,
+                                  decoration: InputDecoration(
+                                    labelText: "الشروط التى يجب ان يتبعها المستأجر",
+                                    labelStyle: TextStyle(
+                                      color: Colors.teal[900],
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    alignLabelWithHint: true,
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return "الرجاء إدخال الوصف";
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 20),
                                 // قسم معلومات الاتصال
                                 TextFormField(
                                   controller: _phoneController,

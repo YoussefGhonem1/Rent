@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rento/admin/approve_screen.dart';
 import 'package:rento/admin/order_admin_screen.dart';
 import 'package:rento/chatadmin/AdminChatList.dart';
+import 'package:rento/componants/custom_drawer.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
 import 'package:rento/renter/details.dart';
@@ -94,11 +95,15 @@ class _ControlAdminState extends State<ControlAdmin> {
     return Scaffold(
       backgroundColor: Colors.teal[50],
       key: _scaffoldKey,
-      drawer: _CustomDrawer(),
+      /*  drawer: _CustomDrawer(), */
+      drawer: CustomDrawer(
+        crud: _crud,
+        userType: sharedPref.getString("type").toString(),
+      ),
       appBar: AppBar(
-        backgroundColor:Colors.teal[800],
-          leading: IconButton(
-          icon: Icon(Icons.menu , color: Colors.teal[50]),
+        backgroundColor: Colors.teal[800],
+        leading: IconButton(
+          icon: Icon(Icons.menu, color: Colors.teal[50]),
           onPressed: () {
             _scaffoldKey.currentState!.openDrawer(); // كده تفتحه بسهولة
           },
@@ -107,10 +112,10 @@ class _ControlAdminState extends State<ControlAdmin> {
           children: [
             Text(
               "RENT",
-               style: TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
-                color:Colors.teal[50],
+                color: Colors.teal[50],
               ),
             ),
             SizedBox(width: 100),
@@ -179,7 +184,8 @@ class _ControlAdminState extends State<ControlAdmin> {
                                         ),
                                         id: '${property['id']}',
                                         owner_id: '${property['id']}',
-
+                                         terms_and_conditions:
+                                            '${property['terms_and_conditions']}',
                                         title: '${property['address']}',
                                         price: '${property['rent_amount']}',
                                         location: '${property['address']}',
@@ -189,16 +195,18 @@ class _ControlAdminState extends State<ControlAdmin> {
                                         state: '${property['property_state']}',
                                         latitude: '${property['latitude']}',
                                         longitude: '${property['longitude']}',
-                                         floor_number:   '${property['floor_number']}',
-                                          room_count:  '${property['room_count']}',
-                                          property_direction:  '${property['property_direction']}',
-                                        rating:'${property['rate']}',
+                                        floor_number:
+                                            '${property['floor_number']}',
+                                        room_count: '${property['room_count']}',
+                                        property_direction:
+                                            '${property['property_direction']}',
+                                        rating: '${property['rate']}',
                                       ),
                                 ),
                               );
                               loadFavorites();
                             },
-                            child:  Container(
+                            child: Container(
                               decoration: BoxDecoration(
                                 color: Colors.teal[100],
                                 borderRadius: BorderRadius.circular(15),
@@ -250,41 +258,54 @@ class _ControlAdminState extends State<ControlAdmin> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                Icons.location_on,
-                                                color: Colors.teal[900],
-                                                size: 24,
-                                              ),
-                                              Text(
-                                                '${property['address']}',
-                                                style: TextStyle(
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.bold,
+                                          Directionality(
+                                            textDirection: TextDirection.rtl,
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.location_on,
                                                   color: Colors.teal[900],
+                                                  size: 24,
                                                 ),
-                                              ),
-                                            ],
+                                                Text(
+                                                  (property['address']?.isNotEmpty ==
+                                                              true &&
+                                                         property['address']!.length >
+                                                              10)
+                                                      ? '${property['address']!.substring(0, 10)}...'
+                                                      : property['address'] ??
+                                                          'لا يوجد عنوان',
+                                                
+                                                  style: TextStyle(
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.teal[900],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                           const SizedBox(height: 3),
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                Icons.attach_money,
-                                                color: Colors.teal[900],
-                                                size: 20,
-                                              ),
-                                              // السعر
-                                              Text(
-                                                " ${'${property['rent_amount']}'} L.E",
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
+                                          Directionality(
+                                            textDirection: TextDirection.rtl,
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.attach_money,
                                                   color: Colors.teal[900],
+                                                  size: 20,
                                                 ),
-                                              ),
-                                            ],
+                                                // السعر
+                                                Text(
+                                                  " ${'${property['rent_amount']}'} ج.م",
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.teal[900],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                           const SizedBox(height: 3),
                                         ],
@@ -372,7 +393,7 @@ class _ControlAdminState extends State<ControlAdmin> {
                                                 'حذف',
                                                 style: TextStyle(
                                                   color: Colors.white,
-                                                  fontSize: 15
+                                                  fontSize: 15,
                                                 ),
                                               ),
                                               style: ElevatedButton.styleFrom(
@@ -411,7 +432,14 @@ class _ControlAdminState extends State<ControlAdmin> {
           );
         },
         backgroundColor: Colors.teal[800],
-          child: Text("اضافه" ,  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.teal[50],),)
+        child: Text(
+          "اضافه",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            color: Colors.teal[50],
+          ),
+        ),
       ),
     );
   }
@@ -419,7 +447,7 @@ class _ControlAdminState extends State<ControlAdmin> {
 
 
 
-
+/* 
 Crud _crud = Crud();
 
 class _CustomDrawer extends StatelessWidget {
@@ -580,3 +608,4 @@ class _CustomDrawer extends StatelessWidget {
   }
 }
 
+ */

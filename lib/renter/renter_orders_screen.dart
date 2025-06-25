@@ -1,7 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
+import 'package:rento/notifications/push_function.dart';
 import 'package:rento/renter/payment.dart'; // تأكد من المسار الصحيح لـ PaymentPage
 import 'package:rento/renter/mobile_wallet_payment.dart'; // ✅ جديد: استيراد MobileWalletPaymentPage
 import '../crud.dart';
@@ -19,7 +19,6 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
   final Crud _crud = Crud();
   List allReservations = [];
   bool isLoading = true;
-  // removed: bool payment_status = false; // لم يعد مستخدماً
 
   Future<void> getReservations() async {
     try {
@@ -32,11 +31,9 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
           isLoading = false;
         });
       } else {
-        print("Failed to load reservations: ${response['message']}");
         setState(() => isLoading = false);
       }
     } catch (e) {
-      print("Error fetching reservations: $e");
       setState(() => isLoading = false);
     }
   }
@@ -49,17 +46,27 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
 
   // دالة لحساب عدد الأيام (مكررة، ممكن تبقى دالة عامة)
   int _calculateNumberOfDays(DateTime start, DateTime end) {
-    return end.difference(start).inDays ; // +1 لحساب اليوم الأخير
+    return end.difference(start).inDays; // +1 لحساب اليوم الأخير
   }
 
   // ✅ دالة جديدة لعرض خيارات الدفع (كـ AlertDialog)
-  void _showPaymentOptions(BuildContext context, double amount, String reservationId, String propertyId) {
+  void _showPaymentOptions(
+    BuildContext context,
+    double amount,
+    String reservationId,
+    String propertyId,
+    String ownerId,
+    String propertyAddress,
+  ) {
     showDialog(
       context: context,
-      builder: (BuildContext dialogContext) { // استخدام dialogContext لتجنب الالتباس
+      builder: (BuildContext dialogContext) {
+        // استخدام dialogContext لتجنب الالتباس
         return AlertDialog(
           backgroundColor: Colors.teal[50],
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
           title: Text(
             "اختر طريقة الدفع",
             style: TextStyle(
@@ -70,7 +77,8 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
             textAlign: TextAlign.right,
           ),
           content: Column(
-            mainAxisSize: MainAxisSize.min, // لجعل الـ Dialog لا يأخذ مساحة كبيرة
+            mainAxisSize:
+                MainAxisSize.min, // لجعل الـ Dialog لا يأخذ مساحة كبيرة
             children: [
               ListTile(
                 leading: Icon(Icons.credit_card, color: Colors.teal[800]),
@@ -83,29 +91,40 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => PaymentPage( // توجيه لصفحة الدفع بالبطاقة
-                        amount: amount,
-                        reservationId: reservationId,
-                        propertyId: propertyId,
-                        onPaymentSuccess: () {
-                          // نفذ الإجراء عند نجاح الدفع (بعد عودة المستخدم)
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('تم الدفع ببطاقة بنجاح!'),
-                            ),
-                          );
-                          getReservations(); // تحديث قائمة الحجوزات
-                        },
-                        onPaymentFailed: () {
-                          // نفذ الإجراء عند فشل الدفع
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('فشل الدفع بالبطاقة.'),
-                            ),
-                          );
-                          getReservations(); // تحديث قائمة الحجوزات حتى لو فشل
-                        },
-                      ),
+                      builder:
+                          (context) => PaymentPage(
+                            // توجيه لصفحة الدفع بالبطاقة
+                            amount: amount,
+                            reservationId: reservationId,
+                            propertyId: propertyId,
+                            onPaymentSuccess: () async {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('تم الدفع ببطاقة بنجاح!'),
+                                  backgroundColor: Colors.teal,
+                                ),
+                              );
+                              await sendNotificationToUserV1(
+                                ownerId,
+                                "تم تاكيد الحجز لعقارك ",
+                                "تم تاكيد حجز عقارك في $propertyAddress من قبل المستأجر. يرجى التحقق من التطبيق لمزيد من التفاصيل.",
+                              );
+                              getReservations(); // تحديث قائمة الحجوزات
+                              setState(() {
+                                isLoading = true; // إعادة تحميل البيانات
+                              }); // تحديث قائمة الحجوزات
+                            },
+                            onPaymentFailed: () {
+                              // نفذ الإجراء عند فشل الدفع
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('فشل الدفع بالبطاقة.'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              getReservations(); // تحديث قائمة الحجوزات حتى لو فشل
+                            },
+                          ),
                     ),
                   );
                 },
@@ -122,29 +141,38 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => MobileWalletPaymentPage( // توجيه لصفحة الدفع بالمحفظة
-                        amount: amount,
-                        reservationId: reservationId,
-                        propertyId: propertyId,
-                        onPaymentSuccess: () {
-                          // نفذ الإجراء عند نجاح الدفع
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('تم الدفع بالمحفظة بنجاح!'),
-                            ),
-                          );
-                          getReservations(); // تحديث قائمة الحجوزات
-                        },
-                        onPaymentFailed: () {
-                          // نفذ الإجراء عند فشل الدفع
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('فشل الدفع بالمحفظة.'),
-                            ),
-                          );
-                          getReservations(); // تحديث قائمة الحجوزات حتى لو فشل
-                        },
-                      ),
+                      builder:
+                          (context) => MobileWalletPaymentPage(
+                            // توجيه لصفحة الدفع بالمحفظة
+                            amount: amount,
+                            reservationId: reservationId,
+                            propertyId: propertyId,
+                            onPaymentSuccess: () async {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('تم الدفع بالمحفظة بنجاح!'),
+                                ),
+                              );
+                              await sendNotificationToUserV1(
+                                ownerId,
+                                "تم تاكيد الحجز لعقارك ",
+                                "تم تاكيد حجز عقارك في $propertyAddress من قبل المستأجر. يرجى التحقق من التطبيق لمزيد من التفاصيل.",
+                              );
+                              getReservations(); // تحديث قائمة الحجوزات
+                              setState(() {
+                                isLoading = true; // إعادة تحميل البيانات
+                              }); // تحديث قائمة الح
+                            },
+                            onPaymentFailed: () {
+                              // نفذ الإجراء عند فشل الدفع
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('فشل الدفع بالمحفظة.'),
+                                ),
+                              );
+                              getReservations(); // تحديث قائمة الحجوزات حتى لو فشل
+                            },
+                          ),
                     ),
                   );
                 },
@@ -154,10 +182,7 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext), // إغلاق الـ Dialog
-              child: Text(
-                "إلغاء",
-                style: TextStyle(color: Colors.teal[700]),
-              ),
+              child: Text("إلغاء", style: TextStyle(color: Colors.teal[700])),
             ),
           ],
         );
@@ -168,14 +193,18 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
   Widget _buildReservationCard(Map<String, dynamic> reservation) {
     final transaction = reservation['transaction'];
     final property = reservation['property'];
-    final images = property['images'] ?? property['photos'] ?? []; // استخدام 'photos' لو 'images' غير موجودة
+    final images =
+        property['images'] ??
+        property['photos'] ??
+        []; // استخدام 'photos' لو 'images' غير موجودة
     final firstImage =
         images.isNotEmpty ? "$linkImageRoot/${images[0]}" : "images/fig.webp";
 
     // حساب المبلغ الإجمالي
     final String startDateStr = transaction['start_date'] ?? '';
     final String endDateStr = transaction['end_date'] ?? '';
-    final double dailyPrice = double.tryParse(property['rent_amount'] ?? '0') ?? 0;
+    final double dailyPrice =
+        double.tryParse(property['rent_amount'] ?? '0') ?? 0;
 
     DateTime startDate;
     DateTime endDate;
@@ -185,8 +214,8 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
     try {
       startDate = DateTime.parse(startDateStr);
       endDate = DateTime.parse(endDateStr);
-      numberOfDays = _calculateNumberOfDays(startDate, endDate);
-      totalPrice = numberOfDays * dailyPrice; 
+      numberOfDays = _calculateNumberOfDays(startDate, endDate) + 1;
+      totalPrice = numberOfDays * dailyPrice;
     } catch (e) {
       print("Error parsing dates or prices: $e");
       // Handle error, e.g., set default values or show an error message
@@ -216,13 +245,16 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                     fav: false,
                     favoriteProperties: [],
                     images: List<String>.from(images),
-                    videos: [], // Assuming no videos from this endpoint
+                    videos: [],
                     id: property['id'].toString(),
-                    owner_id: transaction['owner_id'].toString(), // تأكد من الحصول على owner_id الصحيح
+                    owner_id:
+                        property['owner_id']
+                            .toString(), // تأكد من الحصول على owner_id الصحيح
                     title: property['address'] ?? "",
                     price: property['rent_amount'] ?? "",
                     location: property['address'] ?? "",
                     description: property['description'] ?? "",
+                    terms_and_conditions: '${property['terms_and_conditions']}',
                     phone: property['phone'] ?? "",
                     state: property['property_state'] ?? "",
                     latitude: property['latitude'] ?? "",
@@ -358,10 +390,7 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                       const SizedBox(width: 4),
                       Text(
                         "${transaction['end_date']}",
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.teal[900],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.teal[900]),
                       ),
                     ],
                   ),
@@ -427,8 +456,8 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                   ),
                   const SizedBox(height: 8),
 
-              
-                  if (transaction['status'] == 'confirmed' && transaction['payment_status'] == 'pending')
+                  if (transaction['status'] == 'confirmed' &&
+                      transaction['payment_status'] == 'pending')
                     Center(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
@@ -443,12 +472,13 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                           ),
                         ),
                         onPressed: () {
-                        
                           _showPaymentOptions(
                             context,
                             totalPrice,
-                            transaction['id'].toString(), 
+                            transaction['id'].toString(),
                             property['id'].toString(),
+                            property['owner_id'].toString(),
+                            property['address'],
                           );
                         },
                         child: const Text(
@@ -556,9 +586,10 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : allReservations.isEmpty
+      body:
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : allReservations.isEmpty
               ? Center(
                 child: Text(
                   'لا توجد حجوزات حالية',
@@ -570,8 +601,9 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                 child: ListView.builder(
                   padding: const EdgeInsets.all(10),
                   itemCount: allReservations.length,
-                  itemBuilder: (context, index) =>
-                      _buildReservationCard(allReservations[index]),
+                  itemBuilder:
+                      (context, index) =>
+                          _buildReservationCard(allReservations[index]),
                 ),
               ),
     );

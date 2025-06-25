@@ -107,7 +107,10 @@ class _RealEstateCardState extends State<RealEstateCard> {
                     children: [
                       Icon(Icons.location_on, color: Colors.teal[900], size: 24),
                       Text(
-                        widget.title,
+                        
+                     (widget.title?.isNotEmpty == true && widget.title!.length > 10)
+      ? '${widget.title!.substring(0, 10)}...'
+      : widget.title ?? 'لا يوجد عنوان',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,

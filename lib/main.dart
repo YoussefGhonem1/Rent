@@ -14,7 +14,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   sharedPref = await SharedPreferences.getInstance();
-  await FirebaseNotifications().initNotification();
+
+  // تهيئة FirebaseNotifications التي ستشمل الآن تهيئة الإشعارات المحلية
+  await FirebaseNotifications().initNotification(); //
+  // يجب أن يتم استدعاء تهيئة الإشعارات المحلية قبل runApp
+  await FirebaseNotifications().initializeLocalNotifications(); // إضافة هذه الدالة الجديدة هنا
+
   runApp(const MyApp());
 }
 

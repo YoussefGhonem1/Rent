@@ -11,22 +11,20 @@ plugins {
 android {
     namespace = "com.example.rento"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "29.0.13113456" 
+    ndkVersion = "29.0.13113456"
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true // <--- هذا السطر يجب أن يبقى لـ flutter_local_notifications
+        sourceCompatibility = JavaVersion.VERSION_11 // <--- أعد هذا إلى VERSION_11 أو VERSION_17
+        targetCompatibility = JavaVersion.VERSION_11 // <--- أعد هذا إلى VERSION_11 أو VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = JavaVersion.VERSION_11.toString() // <--- أعد هذا إلى VERSION_11
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.rento"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -35,8 +33,6 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -44,4 +40,10 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // هذا السطر ضروري لـ Core Library Desugaring
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // تأكد من أن هذا الإصدار 2.0.4 كافٍ لإصدارات Java الأعلى، وإلا قد تحتاج للتحقق من أحدث إصدار
 }

@@ -3,6 +3,7 @@ import 'package:rento/admin/approve_screen.dart';
 import 'package:rento/admin/order_admin_screen.dart';
 import 'package:rento/chat/chat_screen.dart';
 import 'package:rento/componants/card.dart';
+import 'package:rento/componants/custom_drawer.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
 import 'package:rento/owner/owner_orders_screen.dart';
@@ -95,7 +96,8 @@ class _FavoriteState extends State<Favorite> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-      drawer: _CustomDrawer(),
+      /* drawer: _CustomDrawer(), */
+       drawer: CustomDrawer(crud: _crud, userType: sharedPref.getString("type").toString()), 
       appBar: AppBar(
         leading: IconButton(
           icon: Icon(Icons.menu, color: Colors.teal[50]),
@@ -206,8 +208,9 @@ class _FavoriteState extends State<Favorite> {
                                             property['videos'],
                                           ),
                                           id: '${property['id']}',
-                                          owner_id: '${property['id']}',
-
+                                          owner_id: '${property['owner_id']}',
+                                             terms_and_conditions:
+                                            '${property['terms_and_conditions']}',
                                           title: '${property['address']}',
                                           price: '${property['rent_amount']}',
                                           location: '${property['address']}',
