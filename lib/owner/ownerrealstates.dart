@@ -1,17 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:rento/chat/chat_screen.dart';
 import 'package:rento/componants/custom_drawer.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
-import 'package:rento/owner/owner_orders_screen.dart';
 import 'package:rento/renter/details.dart';
-import 'package:rento/renter/renter_orders_screen.dart';
-import '../auth/login.dart';
 import '../crud.dart';
-import '../renter/favorites.dart';
 import 'add_prop.dart';
 import 'edit_prop.dart';
-import 'home_owner.dart';
+
 
 class OwnerRealstate extends StatefulWidget {
   const OwnerRealstate({super.key});

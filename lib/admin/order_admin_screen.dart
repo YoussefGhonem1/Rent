@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:rento/admin/approve_screen.dart';
-import 'package:rento/admin/control_admin.dart';
-import 'package:rento/chatadmin/AdminChatList.dart';
 import 'package:rento/componants/custom_drawer.dart';
+import 'package:rento/core/utils/functions/theme.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
-import 'package:rento/renter/favorites.dart';
-import '../auth/login.dart';
 import '../crud.dart';
-import 'home_admin.dart';
 
 class OrderAdminScreen extends StatefulWidget {
   const OrderAdminScreen({super.key});
@@ -24,6 +19,15 @@ class _OrderAdminScreenState extends State<OrderAdminScreen> {
   List allOrders = [];
   bool isLoading = true;
   List filteredOrders = [];
+  Map<int, bool> isCardExpanded = {};
+
+  int calculateNumberOfDays(DateTime start, DateTime end) {
+    return end.difference(start).inDays + 1;
+  }
+
+  double calculateTotalPrice(int numberOfDays, double dailyPrice) {
+    return numberOfDays * dailyPrice;
+  }
 
   Future<void> getOrders() async {
     try {
@@ -85,114 +89,271 @@ class _OrderAdminScreenState extends State<OrderAdminScreen> {
     getOrders();
   }
 
-  Widget _buildOrderCard(Map<String, dynamic> order) {
+  Widget _buildOrderCard(Map<String, dynamic> order, int index) {
     final transaction = order['transaction'];
     final property = order['property'];
     final renter = order['renter'];
     final owner = order['owner'];
+    double totalPrice = calculateTotalPrice(
+      calculateNumberOfDays(
+        DateTime.parse(transaction['start_date']),
+        DateTime.parse(transaction['end_date']),
+      ),
+      double.parse(property['rent_amount']),
+    );
+    double amountPaid = double.parse(transaction['amount_paid']) / 2;
+    bool expanded = isCardExpanded[index] ?? false;
 
-    return Card(
-      elevation: 4,
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-      color: Colors.teal[100],
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Card(
+        elevation: 4,
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+        color: Colors.teal[100],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Property Info
-            Row(
-              children: [
-                Icon(Icons.home, color: Colors.teal[800], size: 20),
-                const SizedBox(width: 5),
-                Expanded(
-                  child: Text(
-                    property['address'] ?? 'No Address',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.teal[900],
-                    ),
-                  ),
+            ListTile(
+              title: Text(
+                property['address'] ?? 'No Address',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.teal[900],
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            // Rental Info
-            _buildInfoRow('المبلغ:', '${property['rent_amount']} L.E'),
-            _buildInfoRow(
-              'التاريخ:',
-              '${transaction['start_date']} - ${transaction['end_date']}',
-            ),
-
-            const Divider(color: Colors.teal, height: 20),
-
-            // Users Info
-            _buildUserSection('المستأجر:', renter),
-            const SizedBox(height: 8),
-            _buildUserSection('المالك:', owner),
-
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                 Chip(
-                    label: Text(
-                      _getStatusText(transaction['status']),
-                      style: const TextStyle(fontSize: 14, color: Colors.white),
-                    ),
-                    backgroundColor: _getStatusColor(transaction['status']),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                  ),
-                
-                
-                  Text(
-                    'موافقه صاحب العقار',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.teal[900],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                
-              ],
-            ),
-
-            // Status & Actions
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Chip(
-                  label: Text(
-                    _getPaymentStatusText(transaction['payment_status']) ??
-                        'N/A',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  backgroundColor: _getPaymentStatusColor(
-                    transaction['payment_status'],
-                  ),
+              ),
+              trailing: IconButton(
+                icon: Icon(
+                  expanded ? Icons.expand_less : Icons.expand_more,
+                  color: Colors.teal[900],
                 ),
-                Row(
+                onPressed: () {
+                  setState(() {
+                    isCardExpanded[index] = !expanded;
+                  });
+                },
+              ),
+            ),
+            AnimatedCrossFade(
+              firstChild: const SizedBox.shrink(),
+              secondChild: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IconButton(
-                      icon: Icon(Icons.delete, color: Colors.red[700]),
-                      onPressed: () => _deleteOrder(transaction['id']),
+                    _buildInfoRow(
+                      'الايجار اليومى:',
+                      '${property['rent_amount']} ج.م',
                     ),
-                    IconButton(
-                      icon: Icon(Icons.edit, color: Colors.teal[800]),
-                      onPressed: () {},
+                    _buildInfoRow(
+                      'التاريخ:',
+                      '${transaction['start_date']} - ${transaction['end_date']}',
+                    ),
+                    _buildInfoRow('المبلغ الكلى:', '$totalPrice ج.م'),
+                    _buildInfoRow(
+                      'رقم الهاتف المضاف مع العقار:',
+                      '${property['phone'] ?? 'N/A'}',
+                    ),
+                    _buildInfoRow(
+                      'رقم الفيزا او المحفظه:',
+                      '${property['wallet_number'] ?? 'N/A'}',
+                    ),
+                    const Divider(color: Colors.teal, height: 20),
+                    _buildUserSection('المستأجر:', renter),
+                    const SizedBox(height: 8),
+                    _buildUserSection('المالك:', owner),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'موافقة صاحب العقار',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[900],
+                          ),
+                        ),
+                        Chip(
+                          label: Text(
+                            _getStatusText(transaction['status']),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                          backgroundColor: _getStatusColor(
+                            transaction['status'],
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                      ],
+                      
+                    ),
+                    const SizedBox(height: 12),
+                
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Chip(
+                          label: Text(
+                            _getPaymentStatusText(
+                              transaction['payment_status'],
+                            ),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          backgroundColor: _getPaymentStatusColor(
+                            transaction['payment_status'],
+                          ),
+                        ),
+                        transaction['transfer_status'] == 'transferred'
+                        ? Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.check_circle, color: Colors.green),
+                              SizedBox(width: 6),
+                              Text(
+                                "تم التحويل",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                        : ElevatedButton.icon(
+                          onPressed: () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              barrierDismissible: false,
+                              builder:
+                                  (ctx) => AlertDialog(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    backgroundColor: Colors.teal[50],
+                                    title: Text(
+                                      'تأكيد',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.teal[900],
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    content: Text(
+                                      'هل أنت متأكد من تأكيد تحويل المبلغ؟',
+                                      style: TextStyle(color: Colors.teal[900]),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    actionsAlignment: MainAxisAlignment.center,
+                                    actions: [
+                                      TextButton(
+                                        onPressed:
+                                            () => Navigator.of(ctx).pop(false),
+                                        child: Text(
+                                          'إلغاء',
+                                          style: TextStyle(
+                                            color: Colors.teal[900],
+                                          ),
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.teal[800],
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                        ),
+                                        onPressed:
+                                            () => Navigator.of(ctx).pop(true),
+                                        child: Text(
+                                          'تأكيد',
+                                          style: TextStyle(color: Colors.white),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                            );
+
+                            if (confirmed == true) {
+                              var response = await _crud.postRequest(
+                                linkConfirmTransfer,
+                                {
+                                  'reservation_id':
+                                      transaction['id'].toString(),
+                                },
+                              );
+                              if (response['status'] == "success") {
+                                showCustomMessage(
+                                  context,
+                                  "تم تأكيد التحويل بنجاح",
+                                  isSuccess: true,
+                                );
+                                getOrders(); // يتم التحديث وهيتغير الزر تلقائي لأن البيانات رجعت جديدة
+                              } else {
+                                showCustomMessage(
+                                  context,
+                                  "حدث خطأ أثناء تأكيد التحويل",
+                                  isSuccess: false,
+                                );
+                              }
+                            }
+                          },
+                          icon: const Icon(
+                            Icons.attach_money,
+                            color: Colors.white,
+                          ),
+                          label: Text(
+                            "تأكيد تحويل ${amountPaid} ج.م",
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green[600],
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.delete, color: Colors.red[700]),
+                          onPressed: () => _deleteOrder(transaction['id']),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
+              crossFadeState:
+                  expanded
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 300),
             ),
           ],
         ),
@@ -277,6 +438,7 @@ class _OrderAdminScreenState extends State<OrderAdminScreen> {
         ),
         Text('الاسم: ${user['username'] ?? 'N/A'}'),
         Text('البريد: ${user['email'] ?? 'N/A'}'),
+        Text('رقم الهاتف: ${user['phone_number'] ?? 'N/A'}'),
       ],
     );
   }
@@ -351,8 +513,10 @@ class _OrderAdminScreenState extends State<OrderAdminScreen> {
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
       ),
-      /* drawer: _CustomDrawer(), */
-       drawer: CustomDrawer(crud: _crud, userType: sharedPref.getString("type").toString()), 
+      drawer: CustomDrawer(
+        crud: _crud,
+        userType: sharedPref.getString("type").toString(),
+      ),
       body:
           isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -370,172 +534,9 @@ class _OrderAdminScreenState extends State<OrderAdminScreen> {
                   itemCount: filteredOrders.length,
                   itemBuilder:
                       (context, index) =>
-                          _buildOrderCard(filteredOrders[index]),
+                          _buildOrderCard(filteredOrders[index], index),
                 ),
               ),
     );
   }
 }
-/* 
-Crud _crud = Crud();
-
-class _CustomDrawer extends StatelessWidget {
-  const _CustomDrawer();
-
-  @override
-  Widget build(BuildContext context) {
-    return Drawer(
-      backgroundColor: Colors.teal[900], // Changed to solid teal color
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // User Profile Section
-            Row(
-              children: [
-                Container(
-                  width: 70,
-                  height: 70,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.2),
-                    border: Border.all(color: Colors.white, width: 0.3),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(35),
-                    child: Image.asset("images/Capture.PNG", fit: BoxFit.cover),
-                  ),
-                ),
-                const SizedBox(width: 15),
-                Text(
-                  sharedPref.getString("username").toString(),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    color: Colors.teal.shade50,
-                  ),
-                ),
-              ],
-            ),
-
-            // Menu Items
-            Expanded(
-              child: ListView(
-                children: [
-                  _buildDrawerItem(
-                    context,
-                    title: "الصفحه الرئيسية", // "Home Page" in Arabic
-                    icon: Icons.home,
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => HomeAdmin()),
-                      );
-                    },
-                  ),
-                  const Divider(color: Colors.white54, height: 10),
-                  _buildDrawerItem(
-                    context,
-                    title: "حساب", // "Account" in Arabic
-                    icon: Icons.account_circle,
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => ControlAdmin()),
-                      );
-                    },
-                  ),
-                  const Divider(color: Colors.white54, height: 10),
-                  _buildDrawerItem(
-                    context,
-                    title: "الطلبات", // "Orders" in Arabic
-                    icon: Icons.list_alt,
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => OrderAdminScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const Divider(color: Colors.white54, height: 10),
-                  _buildDrawerItem(
-                    context,
-                    title: "المفضلة", // "Favorites" in Arabic
-                    icon: Icons.favorite,
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => Favorite()),
-                      );
-                    },
-                  ),
-                  const Divider(color: Colors.white54, height: 10),
-                  _buildDrawerItem(
-                    context,
-                    title: "طلبات التاكيد", // "Favorites" in Arabic
-                    icon: Icons.approval,
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => Approve()),
-                      );
-                    },
-                  ),
-                  const Divider(color: Colors.white54, height: 10),
-                  _buildDrawerItem(
-                    context,
-                    title: "تواصل معنا", // "Contact Us" in Arabic
-                    icon: Icons.contact_support,
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => AdminChatList(),
-                        ),
-                      );
-                    },
-                  ),
-                  SizedBox(height: 200),
-                  _buildDrawerItem(
-                    context,
-                    title: "تسجيل الخروج", // "Sign Out" in Arabic
-                    icon: Icons.logout,
-                    onTap: () {
-                      sharedPref.clear();
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => LoginScreen()),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
-      title: Text(
-        title,
-        style: TextStyle(fontSize: 18, color: Colors.teal.shade50),
-      ),
-      leading: Icon(icon, color: Colors.teal.shade50, size: 26),
-      minLeadingWidth: 30,
-      onTap: onTap,
-    );
-  }
-}
- */

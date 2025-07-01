@@ -108,9 +108,9 @@ class _RealEstateCardState extends State<RealEstateCard> {
                       Icon(Icons.location_on, color: Colors.teal[900], size: 24),
                       Text(
                         
-                     (widget.title?.isNotEmpty == true && widget.title!.length > 10)
-      ? '${widget.title!.substring(0, 10)}...'
-      : widget.title ?? 'لا يوجد عنوان',
+                     (widget.title.isNotEmpty == true && widget.title.length > 10)
+      ? '${widget.title.substring(0, 10)}...'
+      : widget.title ,
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -153,7 +153,7 @@ class _RealEstateCardState extends State<RealEstateCard> {
       
                           widget.rate == "null"
                               ? Text(
-                                "لا تقييم",
+                                "لا تقييم حاليا",
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
@@ -170,7 +170,6 @@ class _RealEstateCardState extends State<RealEstateCard> {
                               ),
                         ],
                       ),
-                      // أيقونة المفضلة
                       Icon(
                         widget.isFavorite
                             ? Icons.favorite

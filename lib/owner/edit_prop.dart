@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:rento/core/utils/functions/theme.dart';
-import 'package:video_player/video_player.dart';
+//import 'package:permission_handler/permission_handler.dart';
+//import 'package:rento/core/utils/functions/theme.dart';
 import '../admin/control_admin.dart';
 import '../crud.dart';
 import '../linkapi.dart';
@@ -24,25 +23,24 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _walletController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _rentAmountController = TextEditingController();
-  final TextEditingController _saleAmountController = TextEditingController();
   final TextEditingController _termsAndConditionsController = TextEditingController();
   String? selectedFloor;
   int? selectedRooms;
   String? selectedDirection;
   List<File> _selectedImages = [];
   final List<File> _selectedVideos = [];
-  final List<VideoPlayerController> _videoControllers = [];
-  final List<bool> _isPlaying = [];
 
-  Future<void> _requestPermissions() async {
+
+ /*  Future<void> _requestPermissions() async {
     final status = await Permission.manageExternalStorage.request();
     if (!status.isGranted) {
        showCustomMessage(context,  "يجب منح صلاحيات الوصول لتحديد الصور/الفيديوهات", isSuccess: true);
   
     }
-  }
+  } */
 
   Future<void> _pickImages() async {
     final pickedImages = await ImagePicker().pickMultiImage();
@@ -54,37 +52,7 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
     }
   }
 
- /*  Future<void> _pickVideo() async {
-    final pickedVideo = await ImagePicker().pickVideo(
-      source: ImageSource.gallery,
-    );
-    if (pickedVideo != null) {
-      File videoFile = File(pickedVideo.path);
-      setState(() {
-        _selectedVideos.add(videoFile);
-        VideoPlayerController videoController = VideoPlayerController.file(
-            videoFile,
-          )
-          ..initialize().then((_) {
-            setState(() {});
-          });
-        _videoControllers.add(videoController);
-        _isPlaying.add(false);
-      });
-    }
-  }
-
-  void _togglePlayPause(int index) {
-    setState(() {
-      if (_isPlaying[index]) {
-        _videoControllers[index].pause();
-      } else {
-        _videoControllers[index].play();
-      }
-      _isPlaying[index] = !_isPlaying[index];
-    });
-  }
- */
+ 
   editRealstate() async {
     isloading = true;
     setState(() {});
@@ -97,6 +65,7 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
           "address": _locationController.text,
           "description": _descriptionController.text,
           "phone": _phoneController.text,
+          "wallet_number": _walletController.text,
           "rent_amount": _rentAmountController.text,
           "imagename": widget.realdata['images'].toString(),
           "floor_number": selectedFloor.toString(),
@@ -132,6 +101,7 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
   @override
   void initState() {
     _descriptionController.text = widget.realdata['description'] ?? '';
+    _walletController.text = widget.realdata['wallet_number'] ?? '';
     _phoneController.text = widget.realdata['phone'] ?? '';
     _locationController.text = widget.realdata['address'] ?? '';
     _rentAmountController.text = widget.realdata['rent_amount']?? '';
@@ -149,9 +119,6 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
 
   @override
   void dispose() {
-    for (var controller in _videoControllers) {
-      controller.dispose();
-    }
     super.dispose();
   }
 
@@ -566,6 +533,31 @@ class _EditRealEstatePageState extends State<EditRealEstatePage> {
                               validator: (value) {
                                 if (value?.isEmpty ?? true) {
                                   return "الرجاء إدخال التكلفة";
+                                }
+                                return null;
+                              },
+                            ),
+                             const SizedBox(height: 20),
+                            TextFormField(
+                              controller: _walletController,
+                              keyboardType: TextInputType.phone,
+                              decoration: InputDecoration(
+                                labelText: "رقم فيزا او محفظه كاش",
+                                labelStyle: TextStyle(color: Colors.teal[900]),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide.none,
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.credit_card,
+                                  color: Colors.teal[900],
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value?.isEmpty ?? true) {
+                                  return "الرجاء إدخال رقم الفيزا او المحفظه";
                                 }
                                 return null;
                               },

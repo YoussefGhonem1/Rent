@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:video_player/video_player.dart';
 import '../admin/home_admin.dart';
 import '../crud.dart';
 import '../linkapi.dart';
@@ -21,14 +20,15 @@ class _AddRealEstatePageState extends State<AddRealEstatePage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _walletController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _rentAmountController = TextEditingController();
   final TextEditingController _saleAmountController = TextEditingController();
    final TextEditingController _termsAndConditionsController = TextEditingController();
   final List<File> _selectedImages = [];
   final List<File> _selectedVideos = [];
-  final List<VideoPlayerController> _videoControllers = [];
-  final List<bool> _isPlaying = [];
+
+
   String? selectedFloor; // لتخزين القيمة المختارة
   int? selectedRooms; // لتخزين القيمة المختارة
   String? selectedDirection; // لتخزين القيمة المختارة
@@ -45,39 +45,7 @@ class _AddRealEstatePageState extends State<AddRealEstatePage> {
     }
   }
 
-  // Pick video
-  Future<void> _pickVideo() async {
-    final pickedVideo = await ImagePicker().pickVideo(
-      source: ImageSource.gallery,
-    );
-    if (pickedVideo != null) {
-      File videoFile = File(pickedVideo.path);
-      setState(() {
-        _selectedVideos.add(videoFile);
-        VideoPlayerController videoController = VideoPlayerController.file(
-            videoFile,
-          )
-          ..initialize().then((_) {
-            setState(() {});
-          });
-        _videoControllers.add(videoController);
-        _isPlaying.add(false); // Video initially paused
-      });
-    }
-  }
-
-  // Toggle play/pause for a video
-  void _togglePlayPause(int index) {
-    setState(() {
-      if (_isPlaying[index]) {
-        _videoControllers[index].pause();
-      } else {
-        _videoControllers[index].play();
-      }
-      _isPlaying[index] = !_isPlaying[index];
-    });
-  }
-
+  
   // Upload images and videos
   addRealEstate() async {
     isLoading = true;
@@ -91,6 +59,7 @@ class _AddRealEstatePageState extends State<AddRealEstatePage> {
           "address": _locationController.text,
           "description": _descriptionController.text,
           "phone": _phoneController.text,
+          "wallet_number": _walletController.text,
           "rent_amount": _rentAmountController.text,
           "sale_amount": _saleAmountController.text,
           "floor_number": selectedFloor.toString(),
@@ -128,9 +97,7 @@ class _AddRealEstatePageState extends State<AddRealEstatePage> {
   @override
   void dispose() {
     super.dispose();
-    for (var controller in _videoControllers) {
-      controller.dispose();
-    }
+
   }
 
   @override
@@ -282,52 +249,7 @@ class _AddRealEstatePageState extends State<AddRealEstatePage> {
                             ),
                           )
                           : const SizedBox.shrink(),
-                      /*   const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: _pickVideo,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color.fromARGB(157, 42, 202, 181),
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 15, horizontal: 50),
-                      ),
-                      child: const Text("Select Video",
-                          style: TextStyle(fontSize: 16 ,  color: Colors.white)),
-                    ),
-                    const SizedBox(height: 20),
-                    _selectedVideos.isNotEmpty
-                        ? SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: _selectedVideos.map((file) {
-                                int index = _selectedVideos.indexOf(file);
-                                return Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 5),
-                                  child: Column(
-                                    children: [
-                                      SizedBox(
-                                        width: 200,
-                                        height: 250,
-                                        child: VideoPlayer(
-                                            _videoControllers[index]),
-                                      ),
-                                      IconButton(
-                                        icon: Icon(
-                                          _isPlaying[index]
-                                              ? Icons.pause
-                                              : Icons.play_arrow,
-                                          color: Colors.black,
-                                        ),
-                                        onPressed: () =>
-                                            _togglePlayPause(index),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          )
-                        : const SizedBox.shrink(), */
+                 
                       const SizedBox(height: 10),
                       Form(
                         child: Padding(
@@ -641,6 +563,35 @@ class _AddRealEstatePageState extends State<AddRealEstatePage> {
                                     return null;
                                   },
                                 ),
+                                 const SizedBox(height: 20),
+                                // قسم معلومات الاتصال
+                                TextFormField(
+                                  controller: _walletController,
+                                  keyboardType: TextInputType.phone,
+                                  decoration: InputDecoration(
+                                    labelText: "رقم فيزا او محفظه كاش",
+                                    labelStyle: TextStyle(
+                                      color: Colors.teal[900],
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    prefixIcon: Icon(
+                                      Icons.credit_card,
+                                      color: Colors.teal[900],
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return "الرجاء إدخال رقم الفيزا او المحفظه";
+                                    }
+                                    return null;
+                                  },
+                                ),
+
 
                                 const SizedBox(height: 30),
 

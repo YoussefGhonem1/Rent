@@ -1,4 +1,5 @@
-   const String linkServerName = "http://192.168.243.1/rent";  
+  /*  const String linkServerName = "http://192.168.243.1/rent";   */
+   const String linkServerName = "https://mkanak.online/rent";  
  /*  const String linkServerName = "http://10.0.2.2/rent";    */
 /*  const String linkServerName = "https://youssef.wuaze.com";  */
 /*   const String linkServerName = "http://localhost:3000";  */
@@ -24,8 +25,6 @@ const String linkGetOwnerId = "$linkServerName/realstates/get_owner_id.php";
 
 
 //favorites
-const String linkAddFav = "$linkServerName/favorites/add_fav.php";
-const String linkDelFav = "$linkServerName/favorites/del_fav.php";
 const String linkGetFav = "$linkServerName/favorites/get_fav.php";
 const String linkGetAllFav = "$linkServerName/favorites/getall_fav.php";
 const String linkToggleFav = "$linkServerName/favorites/toggle_fav.php";
@@ -51,10 +50,12 @@ const String linkRenterOrder = "$linkServerName/orders/renter_orders.php";
 const String linkDeleteOrder = "$linkServerName/orders/delete_order.php";
 const String linkUpdateOrderStatus = "$linkServerName/orders/update_status.php";
 const String linkRejectOrder = "$linkServerName/orders/reject_order.php";
+const String linkConfirmTransfer = "$linkServerName/orders/confirm_transfer.php";
 //payment
-const String linkCheckPaymentStatus = "$linkServerName/payment/paymob_webhook.php";
+//const String linkCheckPaymentStatus = "$linkServerName/payment/paymob_webhook.php";
 const String linkGetPaymobOrderId = "$linkServerName/payment/get_paymob_order_id.php";
 const String linkUpdatePaymobOrderId = "$linkServerName/payment/update_paymob_order_id.php";
+const String linkCheckPaymentStatus = "$linkServerName/payment/check_payment_status.php";
 //notifications
 const String linkGetFcmToken = "$linkServerName/notifications/get_fcm_token.php";
 

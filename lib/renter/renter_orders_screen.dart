@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
-import 'package:rento/notifications/push_function.dart';
 import 'package:rento/renter/payment.dart'; // تأكد من المسار الصحيح لـ PaymentPage
-import 'package:rento/renter/mobile_wallet_payment.dart'; // ✅ جديد: استيراد MobileWalletPaymentPage
 import '../crud.dart';
 import '../renter/details.dart'; // تأكد من المسار الصحيح
 
@@ -86,9 +84,9 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                   "بطاقة ائتمان(فيزا/ماستركارد)",
                   style: TextStyle(color: Colors.teal[900], fontSize: 16),
                 ),
-                onTap: () {
+                onTap: () async{
                   Navigator.pop(dialogContext); // إغلاق الـ Dialog
-                  Navigator.push(
+                 await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder:
@@ -97,6 +95,8 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                             amount: amount,
                             reservationId: reservationId,
                             propertyId: propertyId,
+                            iframeId: "903674",
+                            integrationId: "5001272",
                             onPaymentSuccess: () async {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -104,15 +104,6 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                                   backgroundColor: Colors.teal,
                                 ),
                               );
-                              await sendNotificationToUserV1(
-                                ownerId,
-                                "تم تاكيد الحجز لعقارك ",
-                                "تم تاكيد حجز عقارك في $propertyAddress من قبل المستأجر. يرجى التحقق من التطبيق لمزيد من التفاصيل.",
-                              );
-                              getReservations(); // تحديث قائمة الحجوزات
-                              setState(() {
-                                isLoading = true; // إعادة تحميل البيانات
-                              }); // تحديث قائمة الحجوزات
                             },
                             onPaymentFailed: () {
                               // نفذ الإجراء عند فشل الدفع
@@ -122,11 +113,15 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                                   backgroundColor: Colors.red,
                                 ),
                               );
-                              getReservations(); // تحديث قائمة الحجوزات حتى لو فشل
                             },
                           ),
                     ),
                   );
+                  await Future.delayed(Duration(milliseconds: 500));
+                  setState(() {
+                    isLoading = true; // إعادة تحميل البيانات
+                  }); // تحديث قائمة الحجوزات
+                 await getReservations(); // تحديث قائمة الحجوزات
                 },
               ),
               const Divider(color: Colors.teal, height: 10), // فاصل
@@ -136,32 +131,25 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                   "المحفظة الإلكترونية",
                   style: TextStyle(color: Colors.teal[900], fontSize: 16),
                 ),
-                onTap: () {
+                onTap: () async{
                   Navigator.pop(dialogContext); // إغلاق الـ Dialog
-                  Navigator.push(
+               await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder:
-                          (context) => MobileWalletPaymentPage(
+                          (context) => PaymentPage(
                             // توجيه لصفحة الدفع بالمحفظة
                             amount: amount,
                             reservationId: reservationId,
                             propertyId: propertyId,
+                            iframeId: "933499",
+                            integrationId: "5148358",
                             onPaymentSuccess: () async {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('تم الدفع بالمحفظة بنجاح!'),
                                 ),
                               );
-                              await sendNotificationToUserV1(
-                                ownerId,
-                                "تم تاكيد الحجز لعقارك ",
-                                "تم تاكيد حجز عقارك في $propertyAddress من قبل المستأجر. يرجى التحقق من التطبيق لمزيد من التفاصيل.",
-                              );
-                              getReservations(); // تحديث قائمة الحجوزات
-                              setState(() {
-                                isLoading = true; // إعادة تحميل البيانات
-                              }); // تحديث قائمة الح
                             },
                             onPaymentFailed: () {
                               // نفذ الإجراء عند فشل الدفع
@@ -170,11 +158,15 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                                   content: Text('فشل الدفع بالمحفظة.'),
                                 ),
                               );
-                              getReservations(); // تحديث قائمة الحجوزات حتى لو فشل
                             },
                           ),
                     ),
                   );
+                  await Future.delayed(Duration(milliseconds: 500));
+                  setState(() {
+                    isLoading = true; // إعادة تحميل البيانات
+                  }); // تحديث قائمة الح
+                 await getReservations(); // تحديث قائمة الحجوزات
                 },
               ),
             ],
@@ -210,12 +202,14 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
     DateTime endDate;
     int numberOfDays = 0;
     double totalPrice = 0.0;
+    double totalDeposit = 0.0;
 
     try {
       startDate = DateTime.parse(startDateStr);
       endDate = DateTime.parse(endDateStr);
       numberOfDays = _calculateNumberOfDays(startDate, endDate) + 1;
       totalPrice = numberOfDays * dailyPrice;
+      totalDeposit = totalPrice * 0.2; // Calculate 20% deposit
     } catch (e) {
       print("Error parsing dates or prices: $e");
       // Handle error, e.g., set default values or show an error message
@@ -474,7 +468,7 @@ class _RenterOrdersScreenState extends State<RenterOrdersScreen> {
                         onPressed: () {
                           _showPaymentOptions(
                             context,
-                            totalPrice,
+                            totalDeposit,
                             transaction['id'].toString(),
                             property['id'].toString(),
                             property['owner_id'].toString(),

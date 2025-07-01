@@ -1,17 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:rento/admin/approve_screen.dart';
-import 'package:rento/admin/control_admin.dart';
-import 'package:rento/admin/order_admin_screen.dart';
 import 'package:rento/componants/custom_drawer.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
 import 'package:rento/renter/details.dart';
-import '../auth/login.dart';
-import '../chatadmin/AdminChatList.dart';
 import '../componants/card.dart';
 import '../crud.dart';
 import '../owner/add_prop.dart';
-import '../renter/favorites.dart';
+
 
 class HomeAdmin extends StatefulWidget {
   const HomeAdmin({super.key});
@@ -42,20 +37,6 @@ class _HomeAdminState extends State<HomeAdmin> {
     'أول',
     'ثاني',
   ];
-
-  // دالة لمطابقة ترتيب الأدوار (للفلترة)
-  int _getFloorOrder(String floor) {
-    switch (floor) {
-      case 'أرضي':
-        return 0;
-      case 'أول':
-        return 1;
-      case 'ثاني':
-        return 2;
-      default:
-        return -1; // لو قيمة غير معروفة
-    }
-  }
 
   Future<void> getRealstates() async {
     var response = await _crud.postRequest(linkView, {});

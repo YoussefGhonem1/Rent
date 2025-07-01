@@ -2,16 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:rento/componants/custom_drawer.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
-import 'package:rento/owner/owner_orders_screen.dart';
 import 'package:rento/renter/details.dart';
-import 'package:rento/renter/renter_orders_screen.dart';
-import '../auth/login.dart';
-import '../chat/chat_screen.dart';
 import '../componants/card.dart';
 import '../crud.dart';
-import '../renter/favorites.dart';
 import 'add_prop.dart';
-import 'ownerrealstates.dart';
+
 
 class HomeOwner extends StatefulWidget {
   const HomeOwner({super.key});
@@ -26,43 +21,27 @@ class _HomeOwnerState extends State<HomeOwner> {
   List<int> favoriteProperties = [];
   List allProperties = [];
   List filteredProperties = [];
-
+  bool _loading = true;
   // متحكمات حقول البحث داخل الـ Dialog
   TextEditingController searchNameController = TextEditingController();
   TextEditingController searchFromPriceController = TextEditingController();
   TextEditingController searchToPriceController = TextEditingController();
   // متحكمات لعدد الغرف (مبقوش في RoomCountSection منفصلة)
-  TextEditingController searchRoomCountController = TextEditingController(); // هنخليه حقل واحد لعدد الغرف بالضبط
+  TextEditingController searchRoomCountController =
+      TextEditingController(); // هنخليه حقل واحد لعدد الغرف بالضبط
 
   // متغيرات Dropdown لفلترة الأدوار
   String? selectedFloor; // هيكون لاختيار دور واحد فقط
 
   // قائمة الأدوار المتاحة (تم تعديلها)
-  final List<String> floorOptions = [
-    'أرضي',
-    'أول',
-    'ثاني',
-  ];
+  final List<String> floorOptions = ['أرضي', 'أول', 'ثاني'];
 
-  // دالة لمطابقة ترتيب الأدوار (لو هنحتاج نفلتر 'من' و 'إلى' في المستقبل)
-  // حاليًا بنستخدمها للمطابقة النصية المباشرة
-  int _getFloorOrder(String floor) {
-    switch (floor) {
-      case 'أرضي':
-        return 0;
-      case 'أول':
-        return 1;
-      case 'ثاني':
-        return 2;
-      default:
-        return -1; // لو قيمة غير معروفة
-    }
-  }
 
   getRealstates() async {
     var response = await _crud.postRequest(linkView, {});
     if (response['status'] == 'success') {
       setState(() {
+        _loading = false; // تم تحميل البيانات
         allProperties = response['data'];
         filteredProperties = allProperties; // عرض الكل مبدئياً
       });
@@ -83,19 +62,20 @@ class _HomeOwnerState extends State<HomeOwner> {
     // لا نحتاج لـ setState() هنا لأن getRealstates() و loadFavorites() بيعملوها
   }
 
-  void loadFavorites() async {
-    var response = await _crud.postRequest(linkGetFav, {
-      "user_id": sharedPref.getString("id").toString(),
-    });
+ void loadFavorites() async {
+  var response = await _crud.postRequest(linkGetFav, {
+    "user_id": sharedPref.getString("id").toString(),
+  });
 
-    if (response["status"] == "success") {
-      setState(() {
-        favoriteProperties = List<int>.from(
-          response["favorites"].map((id) => id),
-        );
-      });
-    }
+  if (response["status"] == "success") {
+    setState(() {
+      favoriteProperties = List<int>.from(
+        response["favorites"].map((id) => int.parse(id.toString())),
+      );    });
+  } else {
+    print("Failed to load favorites: ${response['message']}"); // طباعة عند الفشل
   }
+}
 
   @override
   void initState() {
@@ -115,42 +95,48 @@ class _HomeOwnerState extends State<HomeOwner> {
 
     // فلتر الاسم
     if (nameQuery.isNotEmpty) {
-      tempFiltered = tempFiltered.where((property) {
-        return property['address'] != null &&
-            property['address'].toString().toLowerCase().contains(nameQuery);
-      }).toList();
+      tempFiltered =
+          tempFiltered.where((property) {
+            return property['address'] != null &&
+                property['address'].toString().toLowerCase().contains(
+                  nameQuery,
+                );
+          }).toList();
     }
 
     // فلتر السعر
     double? minP = double.tryParse(fromPrice);
     double? maxP = double.tryParse(toPrice);
     if (minP != null || maxP != null) {
-      tempFiltered = tempFiltered.where((property) {
-        double rentAmount =
-            double.tryParse(property['rent_amount'].toString()) ?? 0;
-        bool matchesMin = minP == null || rentAmount >= minP;
-        bool matchesMax = maxP == null || rentAmount <= maxP;
-        return matchesMin && matchesMax;
-      }).toList();
+      tempFiltered =
+          tempFiltered.where((property) {
+            double rentAmount =
+                double.tryParse(property['rent_amount'].toString()) ?? 0;
+            bool matchesMin = minP == null || rentAmount >= minP;
+            bool matchesMax = maxP == null || rentAmount <= maxP;
+            return matchesMin && matchesMax;
+          }).toList();
     }
 
     // جديد: فلتر عدد الغرف (room_count) - رقمي
     int? targetRoomCount = int.tryParse(roomCountQuery);
     if (targetRoomCount != null) {
-      tempFiltered = tempFiltered.where((property) {
-        int propertyRoomCount = int.tryParse(property['room_count']?.toString() ?? '0') ?? 0;
-        return propertyRoomCount == targetRoomCount; // مطابقة العدد بالضبط
-      }).toList();
+      tempFiltered =
+          tempFiltered.where((property) {
+            int propertyRoomCount =
+                int.tryParse(property['room_count']?.toString() ?? '0') ?? 0;
+            return propertyRoomCount == targetRoomCount; // مطابقة العدد بالضبط
+          }).toList();
     }
 
     // تعديل: فلتر الطابق (floor_number) - مطابقة نصية
     if (selectedFloor != null) {
-      tempFiltered = tempFiltered.where((property) {
-        String propertyFloor = property['floor_number']?.toString() ?? '';
-        return propertyFloor == selectedFloor; // مطابقة الطابق بالضبط
-      }).toList();
+      tempFiltered =
+          tempFiltered.where((property) {
+            String propertyFloor = property['floor_number']?.toString() ?? '';
+            return propertyFloor == selectedFloor; // مطابقة الطابق بالضبط
+          }).toList();
     }
-
 
     setState(() {
       filteredProperties = tempFiltered;
@@ -188,7 +174,10 @@ class _HomeOwnerState extends State<HomeOwner> {
                       decoration: InputDecoration(
                         labelText: "ابحث بالاسم/العنوان",
                         labelStyle: TextStyle(color: Colors.teal[800]),
-                        prefixIcon: Icon(Icons.location_on, color: Colors.teal[700]),
+                        prefixIcon: Icon(
+                          Icons.location_on,
+                          color: Colors.teal[700],
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                           borderSide: BorderSide(color: Colors.teal.shade400),
@@ -272,7 +261,10 @@ class _HomeOwnerState extends State<HomeOwner> {
                     // الطابق (Dropdown)
                     DropdownButtonFormField<String>(
                       value: selectedFloor,
-                      hint: Text("اختر الطابق", style: TextStyle(color: Colors.teal[800])),
+                      hint: Text(
+                        "اختر الطابق",
+                        style: TextStyle(color: Colors.teal[800]),
+                      ),
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -284,12 +276,18 @@ class _HomeOwnerState extends State<HomeOwner> {
                         // خيار "مسح الاختيار" للطابق
                         const DropdownMenuItem<String>(
                           value: null,
-                          child: Text(" اختر الطابق", style: TextStyle(color: Colors.grey)),
+                          child: Text(
+                            " اختر الطابق",
+                            style: TextStyle(color: Colors.grey),
+                          ),
                         ),
                         ...floorOptions.map((String floor) {
                           return DropdownMenuItem<String>(
                             value: floor,
-                            child: Text(floor, style: TextStyle(color: Colors.teal[900])),
+                            child: Text(
+                              floor,
+                              style: TextStyle(color: Colors.teal[900]),
+                            ),
                           );
                         }),
                       ],
@@ -308,7 +306,10 @@ class _HomeOwnerState extends State<HomeOwner> {
                       decoration: InputDecoration(
                         labelText: "عدد الغرف (بالضبط)",
                         labelStyle: TextStyle(color: Colors.teal[800]),
-                        prefixIcon: Icon(Icons.meeting_room, color: Colors.teal[700]),
+                        prefixIcon: Icon(
+                          Icons.meeting_room,
+                          color: Colors.teal[700],
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -318,7 +319,6 @@ class _HomeOwnerState extends State<HomeOwner> {
                       style: TextStyle(color: Colors.teal[900]),
                     ),
                     const SizedBox(height: 10),
-                   
                   ],
                 ),
               ),
@@ -326,7 +326,9 @@ class _HomeOwnerState extends State<HomeOwner> {
                 TextButton(
                   onPressed: () async {
                     // مسح الفلاتر وإعادة تحميل العقارات الأصلية
-                    _clearFiltersInDialog(setDialogState); // مسح حقول الـ Dialog
+                    _clearFiltersInDialog(
+                      setDialogState,
+                    ); // مسح حقول الـ Dialog
                     Navigator.pop(context); // إغلاق الـ Dialog
                     await load(); // إعادة تحميل العقارات كلها
                   },
@@ -379,8 +381,10 @@ class _HomeOwnerState extends State<HomeOwner> {
     return Scaffold(
       backgroundColor: Colors.teal[50],
       key: _scaffoldKey,
-      /* drawer: const _CustomDrawer(), */
-       drawer: CustomDrawer(crud: _crud, userType: sharedPref.getString("type").toString()), 
+      drawer: CustomDrawer(
+        crud: _crud,
+        userType: sharedPref.getString("type").toString(),
+      ),
       appBar: AppBar(
         backgroundColor: Colors.teal[800],
         leading: IconButton(
@@ -413,71 +417,79 @@ class _HomeOwnerState extends State<HomeOwner> {
           padding: const EdgeInsets.all(10),
           child: ListView(
             children: [
-              filteredProperties.isEmpty
+              _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : filteredProperties.isEmpty
                   ? const Center(child: Text("لا يوجد عقارات متاحة"))
                   : GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                        childAspectRatio: 0.69,
-                      ),
-                      itemCount: filteredProperties.length,
-                      itemBuilder: (context, index) {
-                        var property = filteredProperties[index];
-                        return InkWell(
-                          onTap: () async {
-                            var result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) => RealEstateDetailsPage(
-                                      fav: false,
-                                      favoriteProperties: favoriteProperties,
-                                      images: List<String>.from(property['photos']),
-                                      videos: List<String>.from(property['videos']),
-                                      id: '${property['id']}',
-                                      owner_id: '${property['owner_id']}',
-                                      title: '${property['address']}',
-                                      price: '${property['rent_amount']}',
-                                      location: '${property['address']}',
-                                      description: '${property['description']}',
-                                       terms_and_conditions:
-                                            '${property['terms_and_conditions']}',
-                                      phone: '${property['phone']}',
-                                      state: '${property['property_state']}',
-                                      latitude: '${property['latitude']}',
-                                      longitude: '${property['longitude']}',
-                                      floor_number: '${property['floor_number']}',
-                                      room_count: '${property['room_count']}',
-                                      property_direction: '${property['property_direction']}',
-                                      rating:'${property['rate']}',
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          childAspectRatio: 0.69,
+                        ),
+                    itemCount: filteredProperties.length,
+                    itemBuilder: (context, index) {
+                      var property = filteredProperties[index];
+                      return InkWell(
+                        onTap: () async {
+                          var result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => RealEstateDetailsPage(
+                                    fav: false,
+                                    favoriteProperties: favoriteProperties,
+                                    images: List<String>.from(
+                                      property['photos'],
                                     ),
-                              ),
-                            );
-
-                            if (result == true) {
-                              await getRealstates();
-                            }
-                            loadFavorites();
-                          },
-                          child: RealEstateCard(
-                            image: "$linkImageRoot/${property['photos'][0]}",
-                            title: '${property['address']}',
-                            price: '${property['rent_amount']}',
-                            location: '${property['address']}',
-                            description: '${property['description']}',
-                            rate: '${property['rate']}',
-                            status: '${property['property_state']}',
-                            isFavorite: favoriteProperties.contains(
-                              property['id'],
+                                    videos: List<String>.from(
+                                      property['videos'],
+                                    ),
+                                    id: '${property['id']}',
+                                    owner_id: '${property['owner_id']}',
+                                    title: '${property['address']}',
+                                    price: '${property['rent_amount']}',
+                                    location: '${property['address']}',
+                                    description: '${property['description']}',
+                                    terms_and_conditions:
+                                        '${property['terms_and_conditions']}',
+                                    phone: '${property['phone']}',
+                                    state: '${property['property_state']}',
+                                    latitude: '${property['latitude']}',
+                                    longitude: '${property['longitude']}',
+                                    floor_number: '${property['floor_number']}',
+                                    room_count: '${property['room_count']}',
+                                    property_direction:
+                                        '${property['property_direction']}',
+                                    rating: '${property['rate']}',
+                                  ),
                             ),
+                          );
+
+                          if (result == true) {
+                            await getRealstates();
+                          }
+                          loadFavorites();
+                        },
+                        child: RealEstateCard(
+                          image: "$linkImageRoot/${property['photos'][0]}",
+                          title: '${property['address']}',
+                          price: '${property['rent_amount']}',
+                          location: '${property['address']}',
+                          description: '${property['description']}',
+                          rate: '${property['rate']}',
+                          status: '${property['property_state']}',
+                          isFavorite: favoriteProperties.contains(
+                           int.parse(property['id']),
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
+                  ),
             ],
           ),
         ),
@@ -494,201 +506,16 @@ class _HomeOwnerState extends State<HomeOwner> {
                   );
                 },
                 backgroundColor: Colors.teal[800],
-                child: Text("اضافه" ,  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.teal[50],),)
+                child: Text(
+                  "اضافه",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Colors.teal[50],
+                  ),
+                ),
               )
               : Container(),
     );
   }
 }
-/* 
-class _CustomDrawer extends StatelessWidget {
-  const _CustomDrawer();
-
-  @override
-  Widget build(BuildContext context) {
-    return Drawer(
-      backgroundColor: Colors.teal[900],
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // User Profile Section
-            Row(
-              children: [
-                Container(
-                  width: 70,
-                  height: 70,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.2),
-                    border: Border.all(color: Colors.white, width: 0.3),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(35),
-                    child: Image.asset("images/Capture.PNG", fit: BoxFit.cover),
-                  ),
-                ),
-                const SizedBox(width: 15),
-                Text(
-                  sharedPref.getString("username").toString(),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    color: Colors.teal.shade50,
-                  ),
-                ),
-              ],
-            ),
-
-            // Menu Items
-            Expanded(
-              child: ListView(
-                children: [
-                  _buildDrawerItem(
-                    context,
-                    title: "الصفحه الرئيسية",
-                    icon: Icons.home,
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const HomeOwner()),
-                      );
-                    },
-                  ),
-                  const Divider(color: Colors.white54, height: 10),
-                  _buildDrawerItem(
-                    context,
-                    title: "حساب",
-                    icon: Icons.account_circle,
-                    onTap: () {
-                      if (sharedPref.getString("type").toString() == "owner") {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const OwnerRealstate(),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                  const Divider(color: Colors.white54, height: 10),
-                  _buildDrawerItem(
-                    context,
-                    title: "الطلبات",
-                    icon: Icons.list_alt,
-                    onTap: () {
-                       if (sharedPref.getString("type").toString() == "owner") {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const OwnerOrdersScreen(),
-                          ),
-                        );
-                      }
-                      else{
-                           Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const RenterOrdersScreen(),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                  const Divider(color: Colors.white54, height: 10),
-                  _buildDrawerItem(
-                    context,
-                    title: "المفضلة",
-                    icon: Icons.favorite,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const Favorite()),
-                      );
-                    },
-                  ),
-                  const Divider(color: Colors.white54, height: 10),
-                  _buildDrawerItem(
-                    context,
-                    title: "تواصل معنا",
-                    icon: Icons.contact_support,
-                    onTap: () async {
-                      try {
-                        var response = await Crud().postRequest(
-                          linkCreateChat,
-                          {"user_id": sharedPref.getString("id").toString()},
-                        );
-
-                        if (response['status'] == "success" &&
-                            response.containsKey('chat_id')) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) => ChatScreen(
-                                    chatId: int.parse(
-                                      response['chat_id'].toString(),
-                                    ),
-                                    userId: int.parse(
-                                      sharedPref.getString("id")!,
-                                    ),
-                                  ),
-                            ),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                response['message'] ?? "فشل إنشاء المحادثة",
-                              ),
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("حدث خطأ: ${e.toString()}")),
-                        );
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 270),
-                  _buildDrawerItem(
-                    context,
-                    title: "تسجيل الخروج",
-                    icon: Icons.logout,
-                    onTap: () {
-                      sharedPref.clear();
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LoginScreen()),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
-      title: Text(
-        title,
-        style: TextStyle(fontSize: 18, color: Colors.teal.shade50),
-      ),
-      leading: Icon(icon, color: Colors.teal.shade50, size: 26),
-      minLeadingWidth: 30,
-      onTap: onTap,
-    );
-  }
-} */

@@ -1,17 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:rento/admin/approve_screen.dart';
-import 'package:rento/admin/order_admin_screen.dart';
-import 'package:rento/chatadmin/AdminChatList.dart';
 import 'package:rento/componants/custom_drawer.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
 import 'package:rento/renter/details.dart';
-import '../auth/login.dart';
 import '../crud.dart';
 import '../owner/add_prop.dart';
 import '../owner/edit_prop.dart';
-import '../renter/favorites.dart';
-import 'home_admin.dart';
+
 
 class ControlAdmin extends StatefulWidget {
   const ControlAdmin({super.key});

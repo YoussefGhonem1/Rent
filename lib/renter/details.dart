@@ -1,5 +1,4 @@
 import 'package:rento/core/utils/functions/theme.dart';
-import 'package:rento/notifications/push_function.dart';
 import 'package:flutter/material.dart';
 import '../core/utils/functions/get_location.dart';
 import '../crud.dart';
@@ -7,6 +6,7 @@ import '../linkapi.dart';
 import '../main.dart';
 import 'favorites.dart';
 
+// ignore: must_be_immutable
 class RealEstateDetailsPage extends StatefulWidget {
   final List<String> images;
   final List<String> videos;
@@ -63,8 +63,7 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
   String finalgroupType = "";
   String finalnumberOfPeople = "";
 
-  String messageTitle = "طلب حجز عقار جديد";
-  late String messageBody;
+
 
   bool isOwnerOrAdmin(String userId, String propertyOwnerId) {
     // Check if the user is the owner of the property or an admin
@@ -84,7 +83,7 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
     super.initState();
     stateNotifier = ValueNotifier(widget.state);
 
-    messageBody = "لديك طلب حجز جديد لعقار ${widget.title}";
+   
 
     fetchPropertyState(); // جلب حالة العقار من الخادم
     checkUserBooking(); // جلب حجوزات المستخدم
@@ -101,22 +100,25 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
     return widget.favoriteProperties.contains(propertyId);
   }
 
-  Future<void> toggleFavorite(int propertyId) async {
-    var response = await _crud.postRequest(linkToggleFav, {
-      "user_id": sharedPref.getString("id").toString(),
-      "property_id": widget.id,
-    });
+Future<void> toggleFavorite(int propertyId) async {
+  print("Toggling favorite for property ID: $propertyId"); // طباعة لتتبع العملية
+  var response = await _crud.postRequest(linkToggleFav, {
+    "user_id": sharedPref.getString("id").toString(),
+    "property_id": widget.id,
+  });
 
-    if (response['status'] == "success") {
-      setState(() {
-        if (response['action'] == "added") {
-          widget.favoriteProperties.add(propertyId);
-        } else {
-          widget.favoriteProperties.remove(propertyId);
-        }
-      });
-    }
+  if (response['status'] == "success") {
+    setState(() {
+      if (response['action'] == "added") {
+        widget.favoriteProperties.add(propertyId);
+      } else {
+        widget.favoriteProperties.remove(propertyId);
+      }
+    });
+  } else {
+    print("Failed to toggle favorite: ${response['message']}"); // طباعة عند الفشل
   }
+}
 
   Future<void> fetchPropertyState() async {
     var response = await _crud.postRequest(linkGetPropertyState, {
@@ -125,7 +127,7 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
 
     if (response['status'] == "success") {
       String newState = response['property_state'];
-      String availableDate = response['available_date'] ?? "";
+     // String availableDate = response['available_date'] ?? "";
 
       // تحديث الحالة في واجهة المستخدم
       stateNotifier.value = newState;
@@ -359,8 +361,7 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
     );
   }
 
-  // في ملف details.dart
-  // ... (باقي كود الكلاس _RealEstateDetailsPageState)
+
 
   Widget _showBookingDialog() {
     // الحد الأدنى لاختيار تاريخ البدء هو اليوم الحالي
@@ -468,15 +469,67 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
                     "تاريخ البدء يجب أن يكون قبل أو يساوي تاريخ الانتهاء.",
                     isSuccess: false,
                   );
-
                   return; // لا تكمل إذا كان الشرط غير محقق
                 }
+                             Navigator.pop(context); // إغلاق الـ Dialog الحالي
+                 final confirmed = await showDialog<bool>(
+                              context: context,
+                              barrierDismissible: false,
+                              builder:
+                                  (ctx) => AlertDialog(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    backgroundColor: Colors.teal[50],
+                                    title: Text(
+                                      'تأكيد',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.teal[900],
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    content: Text(
+                                    'عند موافقه صاحب العقار على عرضك سوف يتوجب عليك دفع 20% من المبلغ لتاكيد حجزك',
+                                      style: TextStyle(color: Colors.teal[900]),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    actionsAlignment: MainAxisAlignment.center,
+                                    actions: [
+                                      TextButton(
+                                        onPressed:
+                                            () => Navigator.of(ctx).pop(false),
+                                        child: Text(
+                                          'إلغاء',
+                                          style: TextStyle(
+                                            color: Colors.teal[900],
+                                          ),
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.teal[800],
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                        ),
+                                        onPressed:
+                                            () => Navigator.of(ctx).pop(true),
+                                        child: Text(
+                                          'تأكيد',
+                                          style: TextStyle(color: Colors.white),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                            );
 
-                String userId = sharedPref.getString("id").toString();
-                String propertyOwnerId = widget.owner_id;
-
-                Navigator.pop(context); // إغلاق الـ Dialog الحالي
-                await bookProperty(widget.id, startDate, endDate);
+                            if (confirmed == true) {
+                             await bookProperty(widget.id, startDate, endDate);
+                            }
+               // await bookProperty(widget.id, startDate, endDate);
               },
               child: Text(
                 "تأكيد",
@@ -559,16 +612,11 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
         'numberOfPeople': finalnumberOfPeople,
         'groupType': finalgroupType == 'family' ? 'عائلة' : 'اصدقاء',
       });
+       print("Raw response: $response");
 
       if (response['status'] == "success") {
         await checkUserBooking();
-        print("----------------------------------------------------");
-        print("${widget.owner_id}");
-        await sendNotificationToUserV1(
-          widget.owner_id,
-          messageTitle,
-          messageBody,
-        );
+     
         showCustomMessage(
           context,
           "تم الارسال الى صاحب العقار",
@@ -584,6 +632,7 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
       }
     } catch (e) {
       showCustomMessage(context, "❌ حدث خطأ", isSuccess: false);
+      print("Error booking property: $e");
     }
   }
 
@@ -918,10 +967,10 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
                         ),
                         SizedBox(width: 2),
                         Text(
-                          (widget.title?.isNotEmpty == true &&
-                                  widget.title!.length > 20)
-                              ? '${widget.title!.substring(0, 20)}'
-                              : widget.title ?? 'لا يوجد عنوان',
+                          (widget.title.isNotEmpty == true &&
+                                  widget.title.length > 20)
+                              ? '${widget.title.substring(0, 20)}'
+                              : widget.title ,
                           textAlign: TextAlign.right,
                           style: TextStyle(
                             fontSize: 24,
@@ -933,6 +982,40 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
                     ),
                   ),
                   const SizedBox(height: 10),
+                  sharedPref.getString("type").toString()=="admin"?
+                   Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.phone,
+                          color: Colors.teal[900],
+                          size: 30,
+                        ),
+                        SizedBox(width: 2),
+                        Text(
+                          'الهاتف : ',
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[900],
+                          ),
+                        ),
+                        SizedBox(width: 2),
+                        Text(
+                          widget.phone ,
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal[900],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ): SizedBox.shrink(),
+                   const SizedBox(height: 10),
 
                   Directionality(
                     textDirection: TextDirection.rtl,
@@ -1266,7 +1349,7 @@ class _RealEstateDetailsPageState extends State<RealEstateDetailsPage> {
                       SizedBox(width: 180),
                       IconButton(
                         icon: AnimatedSwitcher(
-                          duration: Duration(milliseconds: 300),
+                          duration: Duration(milliseconds: 100),
                           transitionBuilder:
                               (child, animation) => ScaleTransition(
                                 scale: animation,

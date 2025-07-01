@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:rento/core/utils/functions/theme.dart';
 import 'package:rento/linkapi.dart';
 import 'package:rento/main.dart';
-import 'package:rento/notifications/push_function.dart';
 import '../crud.dart';
 import '../renter/details.dart';
 
@@ -20,7 +19,7 @@ class _OwnerOrdersScreenState extends State<OwnerOrdersScreen> {
   bool isLoading = true;
   String messageTitle = "تم الموافقه على عرضك";
   String messageBody = "تم الموافقه على عرضك من قبل المالك انتقل للدفع الان";
-   String balance = "0.00";
+  String balance = "0.00";
 
   Future<void> getReservations() async {
     try {
@@ -30,7 +29,8 @@ class _OwnerOrdersScreenState extends State<OwnerOrdersScreen> {
       if (response['status'] == 'success') {
         setState(() {
           allReservations = response['data'];
-          balance= (response['data'][0]['owner']['balance'] ?? "0.00").toString();
+          balance =
+              (response['data'][0]['owner']['balance'] ?? "0.00").toString();
           isLoading = false;
         });
       } else {
@@ -47,21 +47,20 @@ class _OwnerOrdersScreenState extends State<OwnerOrdersScreen> {
   void initState() {
     super.initState();
     getReservations();
-    
   }
 
   Widget _buildReservationCard(Map<String, dynamic> reservation) {
     final transaction = reservation['transaction'];
     final property = reservation['property'];
-    
+
     final images = property['images'] ?? [];
-  
+
     final firstImage =
         images.isNotEmpty ? "$linkImageRoot/${images[0]}" : "images/fig.webp";
 
     // Extract reservation details
-    final userId = transaction['user_id'].toString();
-    final int numberOfPeople = transaction['number_of_people'] ?? 0;
+    //final userId = transaction['user_id'].toString();
+    final String numberOfPeople = transaction['number_of_people'] ?? "0";
     final String reservationType = transaction['reservation_type'] ?? 'N/A';
     final String startDate = transaction['start_date'] ?? '';
     final String endDate = transaction['end_date'] ?? '';
@@ -104,8 +103,7 @@ class _OwnerOrdersScreenState extends State<OwnerOrdersScreen> {
                     title: property['address'] ?? "",
                     price: property['rent_amount'] ?? "",
                     location: property['address'] ?? "",
-                     terms_and_conditions:
-                                            '${property['terms_and_conditions']}',
+                    terms_and_conditions: '${property['terms_and_conditions']}',
                     description: "",
                     phone: "",
                     state: "",
@@ -187,7 +185,7 @@ class _OwnerOrdersScreenState extends State<OwnerOrdersScreen> {
                           size: 20,
                         ),
                         Text(
-                          " ${property['rent_amount']}  ج.م / تكلفه اليوم" ,
+                          " ${property['rent_amount']}  ج.م / تكلفه اليوم",
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -272,7 +270,7 @@ class _OwnerOrdersScreenState extends State<OwnerOrdersScreen> {
                                             ),
                                           ),
                                           content: Text(
-                                            'هل انت متاكد من الموفقه على العرض؟',
+                                            ' عندما يقوم المستاجر بدفع 20% من قيمة الايجار الاجمالى سوف تصلك رساله بالتاكيد و ستضاف القيمه لحسابك و سيتم تحويلهم لك عند اسلام المستاجر مع باقى قيمه الايجار',
                                             style: TextStyle(
                                               color: Colors.teal[900],
                                             ),
@@ -316,14 +314,9 @@ class _OwnerOrdersScreenState extends State<OwnerOrdersScreen> {
                                   );
 
                                   if (confirmed == true) {
-                                    var response = await _crud.postRequest(
+                                    await _crud.postRequest(
                                       linkUpdateOrderStatus,
                                       {'id': transaction['id'].toString()},
-                                    );
-                                    await sendNotificationToUserV1(
-                                      userId,
-                                      messageTitle,
-                                      messageBody,
                                     );
                                     showCustomMessage(
                                       context,
@@ -334,6 +327,11 @@ class _OwnerOrdersScreenState extends State<OwnerOrdersScreen> {
                                     await _crud.postRequest(linkDeleteOrder, {
                                       'id': transaction['id'].toString(),
                                     });
+                                    showCustomMessage(
+                                      context,
+                                      "تم رفض العرض",
+                                      isSuccess: false,
+                                    );
                                   }
                                   getReservations();
                                 },

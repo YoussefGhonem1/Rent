@@ -1,25 +1,29 @@
 // 📦 import packages
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import '../crud.dart'; // تأكد أن هذا المسار صحيح
-import 'package:rento/linkapi.dart'; // تأكد أن هذا المسار صحيح
+import '../crud.dart';
+import 'package:rento/linkapi.dart';
 import 'dart:convert';
-import 'package:webview_flutter/webview_flutter.dart'; 
+import 'package:webview_flutter/webview_flutter.dart';
 
 class PaymentPage extends StatefulWidget {
   final double amount;
-  final String reservationId; 
+  final String reservationId;
   final String propertyId;
-  final VoidCallback onPaymentSuccess; 
-  final VoidCallback onPaymentFailed;   
+  final String iframeId;
+  final String integrationId;
+  final VoidCallback onPaymentSuccess;
+  final VoidCallback onPaymentFailed;
 
   const PaymentPage({
     super.key,
     required this.amount,
-    required this.reservationId,   
-    required this.propertyId, // إذا كنت تحتاجه في المستقبل
+    required this.reservationId,
+    required this.propertyId,
     required this.onPaymentSuccess,
     required this.onPaymentFailed,
+     required this.iframeId, 
+     required this.integrationId,
   });
 
   @override
@@ -27,19 +31,16 @@ class PaymentPage extends StatefulWidget {
 }
 
 class _PaymentPageState extends State<PaymentPage> {
-  final String apiKey =
-      "ZXlKaGJHY2lPaUpJVXpVeE1pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SmpiR0Z6Y3lJNklrMWxjbU5vWVc1MElpd2ljSEp2Wm1sc1pWOXdheUk2TVRBeU56UTNNaXdpYm1GdFpTSTZJakUzTlRBMU5EVTVPVEV1T1RNek5UQXlJbjAuaE9XN1JhbzVDb2NSZjZ6SkRfQ3BBM1B3STBpV0Y2dVRqcDI3Ym92NTFBTmZJTmdjX092WTBUV1ZTY1hLdlNHRm1QSGFaSzZpYVV6dVk0dEYxdER5YUE="; 
-  final String integrationId = "5001272"; 
-  final String iframeId = "903674"; 
+  final String apiKey = "ZXlKaGJHY2lPaUpJVXpVeE1pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SmpiR0Z6Y3lJNklrMWxjbU5vWVc1MElpd2ljSEp2Wm1sc1pWOXdheUk2TVRBeU56UTNNaXdpYm1GdFpTSTZJakUzTlRBMU5EVTVPVEV1T1RNek5UQXlJbjAuaE9XN1JhbzVDb2NSZjZ6SkRfQ3BBM1B3STBpV0Y2dVRqcDI3Ym92NTFBTmZJTmdjX092WTBUV1ZTY1hLdlNHRm1QSGFaSzZpYVV6dVk0dEYxdER5YUE="; // 🔐 ضع API KEY هنا
 
-  final Crud _crud = Crud(); 
+  final Crud _crud = Crud();
 
   bool _loading = true;
   String? _paymentUrl;
   late WebViewController _webViewController;
 
-  String? _paymobOrderId; 
-  String? _paymobIntegrationIdUsedForOrder; 
+  String? _paymobOrderId;
+  String? _paymobIntegrationIdUsedForOrder;
 
   @override
   void initState() {
@@ -47,22 +48,41 @@ class _PaymentPageState extends State<PaymentPage> {
     _webViewController = WebViewController();
     initiatePayment(widget.amount);
   }
- Future<void> orderActivate() async {
+
+  Future<void> checkIfPaymentDone() async {
     try {
-      var response = await _crud.postRequest(linkCheckPaymentStatus, {
-        'reservation_id':  widget.reservationId,
-        'property_id':  widget.propertyId,
+        var response = await _crud.postRequest(linkCheckPaymentStatus, {
+          "reservation_id": widget.reservationId,
+          "amount_paid": widget.amount.toString(),
       });
+      
+      var data = jsonDecode(response.body);
+      if (data['status'] == "success" && data['payment_status'] == "paid") {
+        widget.onPaymentSuccess();
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text("تم الدفع"),
+            content: Text("تم الدفع بنجاح وسيتم تأكيد الحجز!"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text("حسناً"),
+              )
+            ],
+          ),
+        );
+      } else {
+        widget.onPaymentFailed();
+      }
     } catch (e) {
-      print("Error fetching reservations: $e");
-    
+      print("Error checking payment status: $e");
     }
   }
-  
+
   Future<void> initiatePayment(double amount) async {
     try {
-     
-      var checkOrderIdResponse = await _crud.postRequest(linkGetPaymobOrderId, {
+        var checkOrderIdResponse = await _crud.postRequest(linkGetPaymobOrderId, {
         "reservation_id": widget.reservationId,
       });
 
@@ -131,7 +151,7 @@ class _PaymentPageState extends State<PaymentPage> {
         print("DEBUG: New Paymob Order ID created: $_paymobOrderId");
 
 
-        _paymobIntegrationIdUsedForOrder = integrationId; 
+        _paymobIntegrationIdUsedForOrder = widget.integrationId; // ✅ استخدام الـ integration ID الممرر من الصفحة
         
         var updateReservationPaymobOrderId = await _crud.postRequest(linkUpdatePaymobOrderId, {
           "reservation_id": widget.reservationId,
@@ -194,65 +214,45 @@ class _PaymentPageState extends State<PaymentPage> {
       }
       print("DEBUG: Payment Token obtained: $paymentToken");
 
-      // 4️⃣ Build payment URL
-      // ✅ تم تعديل الـ URL هنا ليتناسب مع Iframe. تأكد من أن الجزء "accept.paymob.com" أو "paymob.com" صحيح لحسابك.
       final url =
-          "https://accept.paymob.com/api/acceptance/iframes/$iframeId?payment_token=$paymentToken"; 
-      print("DEBUG: Generated Payment URL: $url");
+          "https://accept.paymob.com/api/acceptance/iframes/${widget.iframeId}?payment_token=$paymentToken";
 
       setState(() {
         _paymentUrl = url;
         _loading = false;
       });
 
-      // ✅ تهيئة الـ WebViewController وعرض الـ WebView
       _webViewController
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
         ..setNavigationDelegate(
           NavigationDelegate(
-            onProgress: (int progress) {
-              // يمكنك عرض مؤشر تحميل هنا
-            },
             onPageStarted: (String url) {
-              print('WebView Page started loading: $url');
+              print('WebView started: \$url');
             },
             onPageFinished: (String url) {
-              print('WebView Page finished loading: $url');
-            },
-            onWebResourceError: (WebResourceError error) {
-              print('WebView error: Code: ${error.errorCode}, Description: ${error.description}, U');
-              widget.onPaymentFailed();
-              Navigator.pop(context); // إغلاق الـ WebView عند الخطأ
+              print('WebView finished: \$url');
             },
             onNavigationRequest: (request) {
-              print('WebView Navigation request: ${request.url}');
               if (request.url.contains("success")) {
-                print("Payment Success URL detected!");
-                widget.onPaymentSuccess(); // إشعار للصفحة الأب بالنجاح
-                orderActivate(); // ✅ استدعاء الدالة لتفعيل الطلب
-                Navigator.pop(context); // إغلاق الـ WebView
-                return NavigationDecision.prevent; // منع تحميل الصفحة
+                print("✅ Payment Success URL detected!");
+                Navigator.pop(context);
+                checkIfPaymentDone();
+                return NavigationDecision.prevent;
               } else if (request.url.contains("fail")) {
-                print("Payment Failure URL detected!");
-                widget.onPaymentFailed(); // إشعار للصفحة الأب بالفشل
-                Navigator.pop(context); // إغلاق الـ WebView
-                return NavigationDecision.prevent; // منع تحميل الصفحة
+                print("❌ Payment Failure URL detected!");
+                widget.onPaymentFailed();
+                Navigator.pop(context);
+                return NavigationDecision.prevent;
               }
               return NavigationDecision.navigate;
             },
           ),
         )
         ..loadRequest(Uri.parse(_paymentUrl!));
-
     } catch (e) {
-      print("ERROR: Caught error in initiatePayment: ${e.toString()}");
-      widget.onPaymentFailed(); // إشعار بالفشل
-      setState(() {
-        _loading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("فشل في تهيئة الدفع: ${e.toString()}")),
-      );
+      print("ERROR: \${e.toString()}");
+      widget.onPaymentFailed();
+      setState(() => _loading = false);
     }
   }
 
@@ -261,18 +261,11 @@ class _PaymentPageState extends State<PaymentPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.teal[800],
-        title: const Text(
-          "الدفع الإلكتروني",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: Colors.white,
-          ),
-        ),
+        title: const Text("الدفع الإلكتروني", style: TextStyle(color: Colors.white)),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.teal[50]),
+          icon: Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
-            widget.onPaymentFailed(); // اعتبار العملية فاشلة إذا رجع المستخدم
+            widget.onPaymentFailed();
             Navigator.pop(context);
           },
         ),
@@ -280,9 +273,7 @@ class _PaymentPageState extends State<PaymentPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _paymentUrl != null
-              ? WebViewWidget( // ✅ استخدام WebViewWidget هنا
-                controller: _webViewController,
-              )
+              ? WebViewWidget(controller: _webViewController)
               : const Center(child: Text("فشل إنشاء رابط الدفع")),
     );
   }
